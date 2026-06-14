@@ -1,13 +1,24 @@
+#include <functional>
 #include <iostream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
-std::string getInput(std::string &fullinput, std::string &command);
-std::vector<std::string> splitOnSpace(std::string &str, long startIndex = 0);
-int echo(std::vector<std::string> &parsedInput);
-int type(std::vector<std::string> &parsedInput);
+using parsedType = std::vector<std::string>;
 
-std::string builtins[] = {"exit", "echo", "type", "ls", "cd"};
+std::string getInput(std::string &fullinput, std::string &command);
+parsedType splitOnSpace(std::string &str, long startIndex = 0);
+int echo(parsedType &parsedInput);
+int type(parsedType &parsedInput);
+int builtin_exit(parsedType &parsedInput);
+
+std::unordered_map<std::string, std::function<int(parsedType &)>> builtins = {
+    {"echo", echo},
+    {"type", type},
+    {"exit", builtin_exit},
+    {"", [](parsedType) { return 0; }}
+
+};
 
 int main() {
   // Flush after every std::cout / std:cerr
@@ -20,19 +31,19 @@ int main() {
 
     std::string fullinput, command;
     getInput(fullinput, command);
-    std::vector<std::string> parsedInput = splitOnSpace(fullinput);
+    parsedType parsedInput = splitOnSpace(fullinput);
 
-    if (command == "exit")
-      break;
-    if (command == "echo") {
-      echo(parsedInput);
+    if (builtins.contains(command)) {
+      int exitCode = builtins[command](parsedInput);
+
+      if (exitCode == 1)
+        break;
+
       continue;
+
+    } else {
+      std::cout << command << ": command not found\n";
     }
-    if (command == "type") {
-      type(parsedInput);
-      continue;
-    }
-    std::cout << command << ": command not found\n";
   }
 
   return 0;
@@ -56,7 +67,7 @@ std::string getInput(std::string &fullinput, std::string &command) {
   return fullinput;
 }
 
-std::vector<std::string> splitOnSpace(std::string &str, long startIndex) {
+parsedType splitOnSpace(std::string &str, long startIndex) {
   std::vector<std::string> words;
   long r;
   r = skipLeadingSpace(str, startIndex);
@@ -73,23 +84,37 @@ std::vector<std::string> splitOnSpace(std::string &str, long startIndex) {
   return words;
 }
 
-int echo(std::vector<std::string> &parsedInput) {
+int builtin_exit(parsedType &parsedInput) { return 1; }
+int echo(parsedType &parsedInput) {
   for (int i = 1; i < parsedInput.size(); i++)
     std::cout << parsedInput[i] << " ";
   std::cout << "\n";
   return 0;
 }
-int type(std::vector<std::string> &parsedInput) {
-  std::string command = parsedInput[1];
-  std::string commandType = "unknown";
-  for (int i = 0; i < std::size(builtins); i++) {
-    if (builtins[i] == command)
-      commandType = "builtin";
+
+enum class CommandType {
+  builtin,
+  unknown,
+};
+
+int type(parsedType &parsedInput) {
+  if (parsedInput.size() < 2) {
+    std::cout << "type: missing operand\n";
+    return 10;
   }
-  if (commandType == "builtin") {
+  std::string command = parsedInput[1];
+  CommandType commandType = CommandType::unknown;
+
+  if (builtins.contains(command))
+    commandType = CommandType::builtin;
+
+  switch (commandType) {
+  case CommandType::builtin:
     std::cout << command << " is a shell builtin\n";
-  } else {
+    break;
+  case CommandType::unknown:
     std::cout << command << ": not found\n";
+    break;
   }
 
   return 0;
