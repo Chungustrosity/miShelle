@@ -7,6 +7,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include <sys/types.h>
+#include <sys/wait.h>
+
 namespace fs = std::filesystem;
 using std::cout;
 using string = std::string;
@@ -34,18 +37,31 @@ class ParsedInput {
 public:
   ParsedInput(const string &fullInput) {
     spaceSplitInput = splitOnSpace(fullInput);
-    extractArguments();
     extractCommand();
+    extractArguments();
   }
-  string_view getCommand() { return command; }
+  string_view getCommand() const { return command; }
   const strviewVector &getArguments() const { return arguments; }
-  const bool getNoArguments() const { return noArguments; }
+  bool getNoArguments() const { return noArguments; }
+
+  std::vector<string> get_null_terminated_args() const {
+    std::vector<string> output;
+    output.push_back(string(command));
+    for (auto &arg : arguments) {
+      output.push_back(string(arg));
+    }
+    return output;
+  }
 };
 
 int echo_builtin(const ParsedInput &parsedInput);
 int type_builtin(const ParsedInput &parsedInput);
 int exit_builtin(const ParsedInput &parsedInput);
 int ls_builtin(const ParsedInput &parsedInput);
+int execute(const ParsedInput &parsedInput);
+
+enum class CommandType { builtin, external, notACommand };
+CommandType findCommandType(const string_view &command);
 
 std::unordered_map<string_view, std::function<int(ParsedInput &)>> builtins{
     {"echo", echo_builtin},
@@ -66,12 +82,15 @@ int main() {
     if (command.empty())
       continue;
 
-    if (builtins.contains(parsedInput.getCommand())) {
-      int exitCode = builtins[parsedInput.getCommand()](parsedInput);
+    if (builtins.contains(command)) {
+      int exitCode = builtins[command](parsedInput);
       if (exitCode == 0)
         continue;
       if (exitCode == 1)
         break;
+    } else if (findCommandType(command) == CommandType::external) {
+      execute(parsedInput);
+
     } else {
       cout << parsedInput.getCommand() << ": command not found\n";
     }
@@ -170,7 +189,6 @@ fs::path findInPATH(const string_view &command) {
   return emptyPath;
 }
 
-enum class CommandType { builtin, external, notACommand };
 int type_builtin(const ParsedInput &parsedInput) {
   if (parsedInput.getNoArguments())
     return 0;
@@ -185,7 +203,6 @@ int type_builtin(const ParsedInput &parsedInput) {
   if (builtins.contains(command)) {
     commandType = CommandType::builtin;
   }
-
   switch (commandType) {
   case CommandType::builtin:
     cout << command << " is a shell builtin\n";
@@ -197,8 +214,52 @@ int type_builtin(const ParsedInput &parsedInput) {
     cout << command << ": not found\n";
     break;
   }
-
   return 0;
+}
+
+CommandType findCommandType(const string_view &command) {
+
+  CommandType commandType = CommandType::notACommand;
+
+  fs::path commandPath = findInPATH(command);
+  if (!commandPath.empty())
+    commandType = CommandType::external;
+
+  if (builtins.contains(command)) {
+    commandType = CommandType::builtin;
+  }
+  return commandType;
 }
 int exit_builtin(const ParsedInput &parsedInput) { return 1; }
 int ls_builtin(const ParsedInput &parsedInput) { return 0; }
+
+#if !defined(_WIN32)
+#include <unistd.h>
+#endif
+
+// TODO: refactor so you don't need to check if the command is
+// CommandType::external in the main loop just to apply some of the same logic
+// again here to get the filePath
+int execute(const ParsedInput &parsedInput) {
+  std::string command_string(parsedInput.getCommand());
+  std::vector<string> args = parsedInput.get_null_terminated_args();
+  std::vector<char *> argv;
+  for (auto &arg : args) {
+    argv.push_back(arg.data());
+  }
+  argv.push_back(nullptr);
+
+  pid_t pid = fork();
+  if (pid == 0) {
+    if (execvp(argv[0], argv.data()) == -1) {
+      std::cerr << argv[0] << "command not found\n";
+      exit(1);
+    }
+  } else if (pid > 0) {
+    int status;
+    waitpid(pid, &status, 0);
+  } else {
+    perror("fork");
+  }
+  return 0;
+}
