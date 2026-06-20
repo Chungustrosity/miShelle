@@ -59,6 +59,7 @@ int type_builtin(const ParsedInput &parsedInput);
 int exit_builtin(const ParsedInput &parsedInput);
 int ls_builtin(const ParsedInput &parsedInput);
 int execute(const ParsedInput &parsedInput);
+int pwd_builtin(const ParsedInput &parsedInput);
 
 enum class CommandType { builtin, external, notACommand };
 CommandType findCommandType(const string_view &command);
@@ -67,6 +68,7 @@ std::unordered_map<string_view, std::function<int(ParsedInput &)>> builtins{
     {"echo", echo_builtin},
     {"type", type_builtin},
     {"exit", exit_builtin},
+    {"pwd", pwd_builtin},
     {"ls", ls_builtin}};
 
 int main() {
@@ -260,6 +262,16 @@ int execute(const ParsedInput &parsedInput) {
     waitpid(pid, &status, 0);
   } else {
     perror("fork");
+  }
+  return 0;
+}
+
+int pwd_builtin(const ParsedInput &parsedInput) {
+  try {
+    fs::path cwd = fs::current_path();
+    cout << cwd.string() << "\n";
+  } catch (const fs::filesystem_error &e) {
+    std::cerr << "pwd error: " << e.what() << "\n";
   }
   return 0;
 }
