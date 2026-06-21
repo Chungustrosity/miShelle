@@ -275,6 +275,10 @@ int pwd_builtin(const ParsedInput &parsedInput) {
 }
 int cd_builtin(const ParsedInput &parsedInput) {
   fs::path target = parsedInput.getArguments()[0];
+  if (target.string()[0] == '~') {
+    // only works on POSIX
+    target = fs::path(std::getenv("HOME") + target.string().substr(1));
+  }
   if (!fs::exists(target)) {
     cout << "cd: " << target.string() << ": No such file or directory\n";
     return 0;
