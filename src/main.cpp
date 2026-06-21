@@ -60,16 +60,14 @@ int exit_builtin(const ParsedInput &parsedInput);
 int ls_builtin(const ParsedInput &parsedInput);
 int execute(const ParsedInput &parsedInput);
 int pwd_builtin(const ParsedInput &parsedInput);
+int cd_builtin(const ParsedInput &parsedInput);
 
 enum class CommandType { builtin, external, notACommand };
 CommandType findCommandType(const string_view &command);
 
 std::unordered_map<string_view, std::function<int(ParsedInput &)>> builtins{
-    {"echo", echo_builtin},
-    {"type", type_builtin},
-    {"exit", exit_builtin},
-    {"pwd", pwd_builtin},
-    {"ls", ls_builtin}};
+    {"echo", echo_builtin}, {"type", type_builtin}, {"exit", exit_builtin},
+    {"pwd", pwd_builtin},   {"cd", cd_builtin},     {"ls", ls_builtin}};
 
 int main() {
 
@@ -273,5 +271,21 @@ int pwd_builtin(const ParsedInput &parsedInput) {
   } catch (const fs::filesystem_error &e) {
     std::cerr << "pwd error: " << e.what() << "\n";
   }
+  return 0;
+}
+int cd_builtin(const ParsedInput &parsedInput) {
+  fs::path target = parsedInput.getArguments()[0];
+  if (!fs::exists(target)) {
+    cout << "cd: " << target.string() << ": No such file or directory\n";
+    return 0;
+  }
+  // if (!fs::is_directory(target))
+  //   cout << "cd: " << target.string() << ": is not a directory\n";
+
+  // try {
+  fs::current_path(target);
+  // } catch (const fs::filesystem_error &e) {
+  //   std::cerr << "cd error: " << e.what() << "\n";
+  // }
   return 0;
 }
