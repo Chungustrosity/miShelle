@@ -16,13 +16,67 @@ using string = std::string;
 using string_view = std::string_view;
 using strviewVector = std::vector<std::string_view>;
 
+size_t skipWhitespace(const string &str, size_t startIndex = 0);
 strviewVector splitOnSpace(const string &str);
 
-class ParsedInput {
+std::string expandToken(const string &str) {
+  std::string finalToken;
+  for (int i; i < str.size(); i++) {
+    if (str[i] == '~') {
+      if (i == 0 || str[i - 1] == ' ')
+        finalToken += std::getenv("HOME");
+    } else
+      finalToken += str[i];
+  }
+  return str;
+}
+
+class Parser {
   strviewVector spaceSplitInput;
   string_view command;
   strviewVector arguments;
   bool noArguments = true;
+  bool multiLineCommand = false;
+
+  enum class TokenType { Literal, Processed };
+  std::vector<std::string> tokens;
+  std::vector<TokenType> tokenTypes;
+  void tokenize(const string &inputString) {
+    bool quoted = false;
+    std::string token;
+    TokenType tokenType;
+    size_t l, r;
+    l = r = skipWhitespace(inputString);
+    while (l < inputString.size()) {
+      if (!quoted) {
+        while (r < inputString.size() && !std::isspace(inputString[r])) {
+          if (inputString[r] == '\'') {
+            quoted = true;
+            break;
+          }
+          token += inputString[r];
+        }
+        token = expandToken(token);
+        tokenType = TokenType::Processed;
+
+      } else {
+        while (inputString[r] != '\'') {
+          token += inputString[r];
+          if (r >= inputString.size()) {
+            multiLineCommand = true;
+            break;
+          }
+        }
+        quoted = false;
+        tokenType = TokenType::Literal;
+      }
+      tokens.push_back(token);
+      tokenTypes.push_back(tokenType);
+      token = "";
+      l = r = skipWhitespace(inputString, r);
+    }
+  }
+
   void extractArguments() {
     for (int i = 1; i < spaceSplitInput.size(); i++) {
       arguments.push_back(spaceSplitInput[i]);
@@ -35,14 +89,15 @@ class ParsedInput {
   }
 
 public:
-  ParsedInput(const string &fullInput) {
+  Parser(const string &fullInput, const std::vector<std::string> &history) {
     spaceSplitInput = splitOnSpace(fullInput);
     extractCommand();
     extractArguments();
   }
   string_view getCommand() const { return command; }
   const strviewVector &getArguments() const { return arguments; }
-  bool getNoArguments() const { return noArguments; }
+  bool isNoArguments() const { return noArguments; }
+  bool isMultiLineCommand() const { return multiLineCommand; }
 
   std::vector<string> get_null_terminated_args() const {
     std::vector<string> output;
@@ -54,29 +109,32 @@ public:
   }
 };
 
-int echo_builtin(const ParsedInput &parsedInput);
-int type_builtin(const ParsedInput &parsedInput);
-int exit_builtin(const ParsedInput &parsedInput);
-int ls_builtin(const ParsedInput &parsedInput);
-int execute(const ParsedInput &parsedInput);
-int pwd_builtin(const ParsedInput &parsedInput);
-int cd_builtin(const ParsedInput &parsedInput);
+int echo_builtin(const Parser &parsedInput);
+int type_builtin(const Parser &parsedInput);
+int exit_builtin(const Parser &parsedInput);
+int execute(const Parser &parsedInput);
+int pwd_builtin(const Parser &parsedInput);
+int cd_builtin(const Parser &parsedInput);
 
 enum class CommandType { builtin, external, notACommand };
 CommandType findCommandType(const string_view &command);
 
-std::unordered_map<string_view, std::function<int(ParsedInput &)>> builtins{
-    {"echo", echo_builtin}, {"type", type_builtin}, {"exit", exit_builtin},
-    {"pwd", pwd_builtin},   {"cd", cd_builtin},     {"ls", ls_builtin}};
+std::unordered_map<string_view, std::function<int(Parser &)>> builtins{
+    {"echo", echo_builtin},
+    {"type", type_builtin},
+    {"exit", exit_builtin},
+    {"pwd", pwd_builtin},
+    {"cd", cd_builtin}};
 
 int main() {
+  std::vector<std::string> historyStack;
 
   while (true) {
     cout << "$ ";
 
     string fullInput;
     std::getline(std::cin, fullInput);
-    ParsedInput parsedInput(fullInput);
+    Parser parsedInput(fullInput, historyStack);
     string_view command = parsedInput.getCommand();
     strviewVector arguments = parsedInput.getArguments();
     if (command.empty())
@@ -99,7 +157,7 @@ int main() {
   return 0;
 }
 
-size_t skipWhitespace(const string &str, size_t startIndex = 0) {
+size_t skipWhitespace(const string &str, size_t startIndex) {
   size_t i = startIndex;
   while (i < str.size() && std::isspace(str[i]))
     i++;
@@ -122,7 +180,7 @@ strviewVector splitOnSpace(const string &fullText) {
   return words;
 }
 
-int echo_builtin(const ParsedInput &parsedInput) {
+int echo_builtin(const Parser &parsedInput) {
   for (const auto argument : parsedInput.getArguments()) {
     cout << argument << " ";
   }
@@ -179,7 +237,13 @@ fs::path findInPATH(const string_view &command) {
     size_t r = pathEnvVariable_view.find(DELIM, l);
 
     string_view dir = pathEnvVariable_view.substr(l, r - l);
-    fs::path pathInDir = findPathInDirectory(dir, command);
+    fs::path pathInDir;
+    try {
+      fs::path pathInDir = findPathInDirectory(dir, command);
+    } catch (const fs::filesystem_error &e) {
+      // std::cerr << "Directory " << dir << " traversal error: " << e.what() <<
+      // "\n";
+    }
     if (!pathInDir.empty())
       return pathInDir;
 
@@ -189,8 +253,8 @@ fs::path findInPATH(const string_view &command) {
   return emptyPath;
 }
 
-int type_builtin(const ParsedInput &parsedInput) {
-  if (parsedInput.getNoArguments())
+int type_builtin(const Parser &parsedInput) {
+  if (parsedInput.isNoArguments())
     return 0;
 
   string_view command = parsedInput.getArguments()[0];
@@ -230,8 +294,7 @@ CommandType findCommandType(const string_view &command) {
   }
   return commandType;
 }
-int exit_builtin(const ParsedInput &parsedInput) { return 1; }
-int ls_builtin(const ParsedInput &parsedInput) { return 0; }
+int exit_builtin(const Parser &parsedInput) { return 1; }
 
 #if !defined(_WIN32)
 #include <unistd.h>
@@ -240,7 +303,7 @@ int ls_builtin(const ParsedInput &parsedInput) { return 0; }
 // TODO: refactor so you don't need to check if the command is
 // CommandType::external in the main loop just to apply some of the same logic
 // again here to get the filePath
-int execute(const ParsedInput &parsedInput) {
+int execute(const Parser &parsedInput) {
   std::string command_string(parsedInput.getCommand());
   std::vector<string> args = parsedInput.get_null_terminated_args();
   std::vector<char *> argv;
@@ -264,7 +327,7 @@ int execute(const ParsedInput &parsedInput) {
   return 0;
 }
 
-int pwd_builtin(const ParsedInput &parsedInput) {
+int pwd_builtin(const Parser &parsedInput) {
   try {
     fs::path cwd = fs::current_path();
     cout << cwd.string() << "\n";
@@ -273,7 +336,7 @@ int pwd_builtin(const ParsedInput &parsedInput) {
   }
   return 0;
 }
-int cd_builtin(const ParsedInput &parsedInput) {
+int cd_builtin(const Parser &parsedInput) {
   fs::path target = parsedInput.getArguments()[0];
   if (target.string()[0] == '~') {
     // only works on POSIX
@@ -293,3 +356,182 @@ int cd_builtin(const ParsedInput &parsedInput) {
   // }
   return 0;
 }
+
+      
+
+        
+
+        
+
+        
+
+        
+
+        
+
+
+        
+
+        
+
+        
+
+        
+ 
+             
+      
+
+      
+    
+          
+
+  
+
+  
+    
+      
+  
+ 
+
+  
+      
+      
+        
+      
+        
+        
+      
+    
+    
+      
+      
+        
+      
+        
+      
+  
+     
+
+              
+
+              
+      
+
+      
+          
+      
+      
+          
+      
+          
+
+          
+        
+            
+          
+          
+          
+          
+        
+
+      
+          
+      
+     
+
+    
+  
+
+  
+        
+    
+      
+        
+  
+        
+    
+        
+    
+             
+      
+            
+          
+
+        
+        
+
+        
+       
+      
+     
+
+    
+            
+        
+      
+            
+      
+    
+      
+
+      
+
+
+        
+        
+        
+      
+                
+          
+                 
+                
+        
+
+                  
+
+      
+      
+              
+                                   
+                
+          
+                
+          
+              
+            
+         
+        
+              
+      
+
+      
+        
+              
+          
+                
+        
+              
+
+
+              
+
+              
+
+        
+              
+        
+                
+
+              
+          
+          
+            
+          
+            
+            // 
+            
+           
+          
+              
+
+              
