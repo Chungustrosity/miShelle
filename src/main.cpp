@@ -16,7 +16,7 @@ namespace fs = std::filesystem;
 using std::cout;
 using string = std::string;
 using string_view = std::string_view;
-using strviewVector = std::vector<std::string_view>;
+using strVector = std::vector<std::string>;
 
 int echo_builtin(const Parser &parsedInput);
 int type_builtin(const Parser &parsedInput);
@@ -26,7 +26,7 @@ int pwd_builtin(const Parser &parsedInput);
 int cd_builtin(const Parser &parsedInput);
 
 enum class CommandType { builtin, external, notACommand };
-CommandType findCommandType(const string_view &command);
+CommandType findCommandType(const string &command);
 
 std::unordered_map<string_view, std::function<int(Parser &)>> builtins{
     {"echo", echo_builtin},
@@ -44,8 +44,8 @@ int main() {
     string fullInput;
     std::getline(std::cin, fullInput);
     Parser parsedInput(fullInput, historyStack);
-    string_view command = parsedInput.getCommand();
-    strviewVector arguments = parsedInput.getArguments();
+    string command = parsedInput.getCommand();
+    strVector arguments = parsedInput.getArguments();
     if (command.empty())
       continue;
 
@@ -81,18 +81,17 @@ int echo_builtin(const Parser &parsedInput) {
 bool canBeExecuted(const fs::path &filePath) {
 #if defined(_WIN32)
   string extension = filePath.extension().string();
-  for (char *c : extension)
+  for (char &c : extension)
     c = ::tolower(c);
-  return (extension == ".exe" && extension == ".bat" && extension == ".cmd" &&
-          extension == ".com")
+  return (extension == ".exe" || extension == ".bat" || extension == ".cmd" ||
+          extension == ".com");
 
 #else
   return access(filePath.c_str(), X_OK) == 0;
 
 #endif
 }
-fs::path findPathInDirectory(const string_view &dirPath,
-                             const string_view commandName) {
+fs::path findPathInDirectory(const string &dirPath, const string &commandName) {
   if (!fs::exists(dirPath) || !fs::is_directory(dirPath))
     return "";
   for (const auto &dirEntry : fs::directory_iterator(dirPath)) {
@@ -104,36 +103,37 @@ fs::path findPathInDirectory(const string_view &dirPath,
   return emptyPath;
 }
 
-fs::path findInPATH(const string_view &command) {
-  const char *pathEnvVariable = std::getenv("PATH");
-  if (pathEnvVariable == nullptr) {
+#if defined(_WIN32)
+const char DELIM = ';';
+#else
+const char DELIM = ':';
+#endif
+
+fs::path findInPATH(const string &command) {
+  const char *rawPath = std::getenv("PATH");
+  string pathEnvVariable = (rawPath ? rawPath : "") + DELIM;
+  if (pathEnvVariable == string(1, DELIM)) {
     std::cerr << "PATH Environment Variable wasn't found\n";
     return " ";
   }
-  string_view pathEnvVariable_view = std::getenv("PATH");
 
-#if defined(_WIN32)
-  const char DELIM = ';';
-#else
-  const char DELIM = ':';
-#endif
-  size_t l;
-  l = 0;
-  while (l != std::string_view::npos) {
-    size_t r = pathEnvVariable_view.find(DELIM, l);
+  string dir;
+  for (int i = 0; i < pathEnvVariable.size(); i++) {
+    if (pathEnvVariable[i] == DELIM) {
+      fs::path pathInDir;
+      try {
+        pathInDir = findPathInDirectory(dir, command);
+      } catch (const fs::filesystem_error &e) {
+        std::cerr << "Directory " << dir << " traversal error: " << e.what()
+                  << "\n";
+      }
+      if (!pathInDir.empty())
+        return pathInDir;
 
-    string_view dir = pathEnvVariable_view.substr(l, r - l);
-    fs::path pathInDir;
-    try {
-      fs::path pathInDir = findPathInDirectory(dir, command);
-    } catch (const fs::filesystem_error &e) {
-      // std::cerr << "Directory " << dir << " traversal error: " << e.what() <<
-      // "\n";
+      dir = "";
+    } else {
+      dir += pathEnvVariable[i];
     }
-    if (!pathInDir.empty())
-      return pathInDir;
-
-    l = r == string::npos ? string::npos : r + 1;
   }
   fs::path emptyPath;
   return emptyPath;
@@ -143,7 +143,7 @@ int type_builtin(const Parser &parsedInput) {
   if (parsedInput.isNoArguments())
     return 0;
 
-  string_view command = parsedInput.getArguments()[0];
+  string command = parsedInput.getArguments()[0];
   CommandType commandType = CommandType::notACommand;
 
   fs::path commandPath = findInPATH(command);
@@ -167,7 +167,7 @@ int type_builtin(const Parser &parsedInput) {
   return 0;
 }
 
-CommandType findCommandType(const string_view &command) {
+CommandType findCommandType(const string &command) {
 
   CommandType commandType = CommandType::notACommand;
 

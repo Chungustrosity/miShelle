@@ -1,15 +1,13 @@
 #pragma once
 
 #include <string>
-#include <string_view>
 #include <vector>
 
 class Parser {
 private:
-  std::vector<std::string_view> spaceSplitInput;
-  std::string_view command;
-  std::vector<std::string_view> arguments;
-  bool noArguments = true;
+  std::string command;
+  std::vector<std::string> arguments;
+  bool noArguments = false;
   bool multiLineCommand = false;
 
   enum class TokenType { Literal, Processed };
@@ -23,9 +21,10 @@ private:
 public:
   Parser(const std::string &fullInput, const std::vector<std::string> &history);
 
-  std::string_view getCommand() const;
-  const std::vector<std::string_view> &getArguments() const;
+  std::string getCommand() const;
+  const std::vector<std::string> getArguments() const;
   bool isNoArguments() const;
   bool isMultiLineCommand() const;
   std::vector<std::string> get_null_terminated_args() const;
+  const std::vector<std::string> &getTokens() const;
 };

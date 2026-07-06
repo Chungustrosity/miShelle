@@ -27,12 +27,12 @@ strviewVector splitOnSpace(const std::string &fullText) {
 
 std::string expandToken(const std::string &str) {
   std::string finalToken;
-  for (int i; i < str.size(); i++) {
+  for (int i = 0; i < str.size(); i++) {
     if (str[i] == '~') {
       if (i == 0 || str[i - 1] == ' ')
         finalToken += std::getenv("HOME");
     } else
       finalToken += str[i];
   }
-  return str;
+  return finalToken;
 }
