@@ -109,7 +109,7 @@ const char DELIM = ':';
 
 fs::path findInPATH(const string &command) {
   const char *rawPath = std::getenv("PATH");
-  string pathEnvVariable = (rawPath ? rawPath : "") + DELIM;
+  string pathEnvVariable = string(rawPath ? rawPath : "") + DELIM;
   if (pathEnvVariable == string(1, DELIM)) {
     std::cerr << "PATH Environment Variable wasn't found\n";
     return " ";
@@ -240,5 +240,3 @@ int cd_builtin(const Parser &parsedInput) {
   // }
   return 0;
 }
-
-//
