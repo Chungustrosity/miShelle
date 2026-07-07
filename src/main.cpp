@@ -56,11 +56,8 @@ int main() {
         continue;
       if (exitCode == 1)
         break;
-    } else if (findCommandType(command) == CommandType::external) {
-      execute(parsedInput);
-
     } else {
-      cout << parsedInput.getCommand() << ": command not found\n";
+      execute(parsedInput);
     }
   }
 
@@ -202,7 +199,7 @@ int execute(const Parser &parsedInput) {
   pid_t pid = fork();
   if (pid == 0) {
     if (execvp(argv[0], argv.data()) == -1) {
-      std::cerr << argv[0] << "command not found\n";
+      std::cerr << argv[0] << ": command not found\n";
       exit(1);
     }
   } else if (pid > 0) {
