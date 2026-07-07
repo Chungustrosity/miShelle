@@ -19,14 +19,22 @@ Parser::Parser(const string &fullInput,
 void Parser::tokenize(const string &inputString) {
   bool quoted = false;
   std::string token;
+  bool concatWithPrevious = false;
   TokenType tokenType;
   size_t l, r;
   l = r = skipWhitespace(inputString);
   while (r < inputString.size()) {
+    if (inputString[r] == '\'') {
+      quoted = true;
+      // no need to boundry check since the input string is already padded
+      // with a space in the main loop
+      if (!std::isspace(inputString[r - 1]))
+        concatWithPrevious = true;
+      r++;
+    }
     if (!quoted) {
       while (r < inputString.size() && !std::isspace(inputString[r])) {
         if (inputString[r] == '\'') {
-          quoted = true;
           break;
         }
         token += inputString[r];
@@ -36,17 +44,25 @@ void Parser::tokenize(const string &inputString) {
       tokenType = TokenType::Processed;
 
     } else {
-      while (inputString[r] != '\'') {
-        token += inputString[r];
-        r++;
-        if (r >= inputString.size()) {
+      if (concatWithPrevious) {
+        token += tokens[tokens.size() - 1];
+        tokens.pop_back();
+        tokenTypes.pop_back();
+      }
+
+      while (r < inputString.size() && inputString[r] != '\'') {
+        if (r > inputString.size()) {
           multiLineCommand = true;
+          r++;
           break;
         }
+        token += inputString[r];
+        r++;
       }
       quoted = false;
       tokenType = TokenType::Literal;
     }
+    r++;
     tokens.push_back(token);
     tokenTypes.push_back(tokenType);
     token = "";

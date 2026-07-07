@@ -81,6 +81,25 @@ TEST(ParserTest, expand_telde_correctly) {
   EXPECT_EQ(parser2.getTokens()[1], "/home/panties");
 }
 
+TEST(parserTest, parse_single_quotes_literally) {
+  std::vector<std::string> mockhistory;
+  Parser parser("echo 'boobs are good'", mockhistory);
+  EXPECT_EQ(parser.getCommand(), "echo");
+  EXPECT_EQ(parser.isMultiLineCommand(), false);
+  EXPECT_EQ(parser.getArguments()[0], "boobs are good");
+  EXPECT_EQ(parser.isNoArguments(), false);
+}
+
+TEST(parserTest, concat_single_quoted_strings_with_the_previous_token) {
+  std::vector<std::string> mockhistory;
+  Parser parser("echo 'boobs ''are'' good'", mockhistory);
+  EXPECT_EQ(parser.getArguments().size(), 1);
+  EXPECT_EQ(parser.getCommand(), "echo");
+  EXPECT_EQ(parser.getArguments()[0], "boobs are good");
+  EXPECT_EQ(parser.isNoArguments(), false);
+  EXPECT_EQ(parser.isMultiLineCommand(), false);
+}
+
 // TEST(ParserTest, single_quote_support){
 //   std::string mockinput = "hello world"
 // }

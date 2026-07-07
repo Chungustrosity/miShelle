@@ -41,7 +41,8 @@ int main() {
   while (true) {
     cout << "$ ";
 
-    string fullInput;
+    string fullInput = " "; // read the comment on line 30,31  in parser.cpp to
+                            // konw why it's padded with a space in the start
     std::getline(std::cin, fullInput);
     Parser parsedInput(fullInput, historyStack);
     string command = parsedInput.getCommand();
