@@ -81,6 +81,12 @@ void handleNormalToken(const string &inputString, size_t &i, string &token,
   }
   while (i < inputString.size() && !std::isspace(inputString[i]) &&
          !specialTokenIndicator.contains(inputString[i])) {
+    if (inputString[i] == '\\' &&
+        i < inputString.size() - 2) /* -2 because the input is padded */ {
+      token += inputString[i + 1];
+      i += 2;
+      continue;
+    }
     token += inputString[i];
     i++;
   }
