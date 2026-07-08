@@ -5,6 +5,8 @@
 #include <cstddef>
 #include <functional>
 #include <print>
+#include <string>
+#include <unordered_set>
 #include <vector>
 
 using std::string;
@@ -21,8 +23,12 @@ Parser::Parser(const string &fullInput,
 // Private
 // input string is padded in the main loop so boundry checks aren't necessary
 // for a single index more/less than r
+void concatWithPrevious(const size_t i, string &token,
+                        std::vector<string> &tokens,
+                        std::vector<TokenType> &tokenTypes);
 void handleNormalToken(const string &inputString, size_t &i, string &token,
-                       TokenType &tokenType);
+                       TokenType &tokenType, std::vector<string> &tokens,
+                       std::vector<TokenType> &tokenTypes);
 bool handleSingleQuotedToken(const string &inputString, size_t &i,
                              string &token, TokenType &tokenType,
                              std::vector<string> &tokens,
@@ -32,6 +38,7 @@ std::unordered_map<char, std::function<bool(const string &, size_t &, string &,
                                             TokenType &, std::vector<string> &,
                                             std::vector<TokenType> &, bool &)>>
     specialTokenIndicator{{'\'', handleSingleQuotedToken}};
+std::unordered_set<char> concatSpeciaIndicators{'\''};
 
 void Parser::tokenize(const string &inputString) {
   std::string token;
@@ -48,7 +55,7 @@ void Parser::tokenize(const string &inputString) {
         continue;
       }
     } else {
-      handleNormalToken(inputString, r, token, tokenType);
+      handleNormalToken(inputString, r, token, tokenType, tokens, tokenTypes);
     }
 
     tokens.push_back(token);
@@ -60,7 +67,11 @@ void Parser::tokenize(const string &inputString) {
 }
 
 void handleNormalToken(const string &inputString, size_t &i, string &token,
-                       TokenType &tokenType) {
+                       TokenType &tokenType, std::vector<string> &tokens,
+                       std::vector<TokenType> &tokenTypes) {
+  if (concatSpeciaIndicators.contains(inputString[i - 1])) {
+    concatWithPrevious(i, token, tokens, tokenTypes);
+  }
   while (i < inputString.size() && !std::isspace(inputString[i]) &&
          !specialTokenIndicator.contains(inputString[i])) {
     token += inputString[i];
@@ -82,10 +93,9 @@ bool handleSingleQuotedToken(const string &inputString, size_t &i,
 
   // concatWithPrevious
   if (!std::isspace(inputString[i - 1])) {
-    token += tokens[tokens.size() - 1]; // TODO: check if it even exists
-    tokens.pop_back();
-    tokenTypes.pop_back();
+    concatWithPrevious(i, token, tokens, tokenTypes);
   }
+
   i++;
   while (inputString[i] != '\'' && i < inputString.size()) {
     token += inputString[i];
@@ -98,6 +108,15 @@ bool handleSingleQuotedToken(const string &inputString, size_t &i,
   i++;
   tokenType = TokenType::Literal;
   return true;
+}
+void concatWithPrevious(const size_t i, string &token,
+                        std::vector<string> &tokens,
+                        std::vector<TokenType> &tokenTypes) {
+  if (tokens.empty())
+    return;
+  token += tokens[tokens.size() - 1];
+  tokens.pop_back();
+  tokenTypes.pop_back();
 }
 
 void Parser::extractArguments() {
