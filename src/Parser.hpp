@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-enum class TokenType { Literal, Processed };
+enum class TokenType { Raw, DoubleQuoted, SingleQuoted };
 
 class Parser {
 private:

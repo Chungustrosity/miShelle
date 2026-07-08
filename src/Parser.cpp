@@ -34,11 +34,18 @@ bool handleSingleQuotedToken(const string &inputString, size_t &i,
                              std::vector<string> &tokens,
                              std::vector<TokenType> &tokenTypes,
                              bool &multiline);
+bool handleDoubleQuotedToken(const string &inputString, size_t &i,
+                             string &token, TokenType &tokenType,
+                             std::vector<string> &tokens,
+                             std::vector<TokenType> &tokenTypes,
+                             bool &multiline);
 std::unordered_map<char, std::function<bool(const string &, size_t &, string &,
                                             TokenType &, std::vector<string> &,
                                             std::vector<TokenType> &, bool &)>>
-    specialTokenIndicator{{'\'', handleSingleQuotedToken}};
-std::unordered_set<char> concatSpeciaIndicators{'\''};
+    specialTokenIndicator{{'\'', handleSingleQuotedToken},
+                          {'"', handleDoubleQuotedToken}};
+
+std::unordered_set<char> concatSpeciaIndicators{'\'', '"'};
 
 void Parser::tokenize(const string &inputString) {
   std::string token;
@@ -78,7 +85,7 @@ void handleNormalToken(const string &inputString, size_t &i, string &token,
     i++;
   }
   token = expandToken(token);
-  tokenType = TokenType::Processed;
+  tokenType = TokenType::Raw;
 }
 
 bool handleSingleQuotedToken(const string &inputString, size_t &i,
@@ -106,7 +113,35 @@ bool handleSingleQuotedToken(const string &inputString, size_t &i,
     return false;
   }
   i++;
-  tokenType = TokenType::Literal;
+  tokenType = TokenType::SingleQuoted;
+  return true;
+}
+bool handleDoubleQuotedToken(const string &inputString, size_t &i,
+                             string &token, TokenType &tokenType,
+                             std::vector<string> &tokens,
+                             std::vector<TokenType> &tokenTypes,
+                             bool &multiline) {
+  if (inputString[i + 1] == '"') {
+    i += 2;
+    return false;
+  }
+
+  // concatWithPrevious
+  if (!std::isspace(inputString[i - 1])) {
+    concatWithPrevious(i, token, tokens, tokenTypes);
+  }
+
+  i++;
+  while (inputString[i] != '"' && i < inputString.size()) {
+    token += inputString[i];
+    i++;
+  }
+  if (i == inputString.size()) {
+    multiline = true;
+    return false;
+  }
+  i++;
+  tokenType = TokenType::DoubleQuoted;
   return true;
 }
 void concatWithPrevious(const size_t i, string &token,
