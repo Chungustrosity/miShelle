@@ -21,7 +21,7 @@ TEST(string_utils_test, expand_tilde) {
 }
 
 TEST(ParserTest, extracts_command_and_args_correctly) {
-  std::string mockinput = "echo hellow world";
+  std::string mockinput = " echo hellow world ";
   std::vector<std::string> mockhistory;
   Parser parser(mockinput, mockhistory);
   EXPECT_EQ(parser.getCommand(), "echo");
@@ -32,12 +32,12 @@ TEST(ParserTest, extracts_command_and_args_correctly) {
 
 TEST(ParserTest, tokenization) {
   std::vector<std::string> mockhistory;
-  std::string empty = "";
-  std::string command = "cd";
-  std::string full = "echo hello world";
-  std::string full2 = "pwd";
-  std::string full3 = "ls ./damn";
-  std::string full4 = "cd ~/bin";
+  std::string empty = "  ";
+  std::string command = " cd ";
+  std::string full = " echo hello world ";
+  std::string full2 = " pwd ";
+  std::string full3 = " ls ./damn ";
+  std::string full4 = " cd ~/bin ";
 
   Parser parser(empty, mockhistory);
   EXPECT_EQ(parser.getTokens().empty(), true);
@@ -67,7 +67,7 @@ TEST(ParserTest, tokenization) {
 }
 
 TEST(ParserTest, expand_telde_correctly) {
-  std::string mockinput = "echo ~/bin";
+  std::string mockinput = " echo ~/bin ";
   std::vector<std::string> mockhistory;
   Parser parser(mockinput, mockhistory);
   EXPECT_EQ(parser.isMultiLineCommand(), false);
@@ -83,7 +83,7 @@ TEST(ParserTest, expand_telde_correctly) {
 
 TEST(parserTest, parse_single_quotes_literally) {
   std::vector<std::string> mockhistory;
-  Parser parser("echo 'boobs are good'", mockhistory);
+  Parser parser(" echo 'boobs are good' ", mockhistory);
   EXPECT_EQ(parser.getCommand(), "echo");
   EXPECT_EQ(parser.isMultiLineCommand(), false);
   EXPECT_EQ(parser.getArguments()[0], "boobs are good");
@@ -92,10 +92,21 @@ TEST(parserTest, parse_single_quotes_literally) {
 
 TEST(parserTest, concat_single_quoted_strings_with_the_previous_token) {
   std::vector<std::string> mockhistory;
-  Parser parser("echo 'boobs ''are'' good'", mockhistory);
+  Parser parser(" echo 'boobs ''are'' good' ", mockhistory);
   EXPECT_EQ(parser.getArguments().size(), 1);
   EXPECT_EQ(parser.getCommand(), "echo");
   EXPECT_EQ(parser.getArguments()[0], "boobs are good");
+  EXPECT_EQ(parser.isNoArguments(), false);
+  EXPECT_EQ(parser.isMultiLineCommand(), false);
+}
+
+TEST(parserTest, ignore_empty_single_quotes) {
+  std::vector<std::string> mockhistory;
+  Parser parser(" echo '' hi' hello' 'boobs' '' ", mockhistory);
+  EXPECT_EQ(parser.getArguments().size(), 2);
+  EXPECT_EQ(parser.getCommand(), "echo");
+  EXPECT_EQ(parser.getArguments()[0], "hi hello");
+  EXPECT_EQ(parser.getArguments()[1], "boobs");
   EXPECT_EQ(parser.isNoArguments(), false);
   EXPECT_EQ(parser.isMultiLineCommand(), false);
 }

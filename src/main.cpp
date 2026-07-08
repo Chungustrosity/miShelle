@@ -28,7 +28,7 @@ int cd_builtin(const Parser &parsedInput);
 enum class CommandType { builtin, external, notACommand };
 CommandType findCommandType(const string &command);
 
-std::unordered_map<string_view, std::function<int(Parser &)>> builtins{
+std::unordered_map<string, std::function<int(Parser &)>> builtins{
     {"echo", echo_builtin},
     {"type", type_builtin},
     {"exit", exit_builtin},
@@ -41,9 +41,10 @@ int main() {
   while (true) {
     cout << "$ ";
 
-    string fullInput = " "; // read the comment on line 30,31  in parser.cpp to
-                            // konw why it's padded with a space in the start
+    string fullInput;
     std::getline(std::cin, fullInput);
+    fullInput = " " + fullInput + " ";
+
     Parser parsedInput(fullInput, historyStack);
     string command = parsedInput.getCommand();
     strVector arguments = parsedInput.getArguments();

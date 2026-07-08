@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+enum class TokenType { Literal, Processed };
+
 class Parser {
 private:
   std::string command;
@@ -10,7 +12,6 @@ private:
   bool noArguments = false;
   bool multiLineCommand = false;
 
-  enum class TokenType { Literal, Processed };
   std::vector<std::string> tokens;
   std::vector<TokenType> tokenTypes;
 

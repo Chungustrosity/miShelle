@@ -2,6 +2,9 @@
 #include "string_utils.hpp"
 
 #include <cctype>
+#include <cstddef>
+#include <functional>
+#include <print>
 #include <vector>
 
 using std::string;
@@ -16,58 +19,85 @@ Parser::Parser(const string &fullInput,
 }
 
 // Private
+// input string is padded in the main loop so boundry checks aren't necessary
+// for a single index more/less than r
+void handleNormalToken(const string &inputString, size_t &i, string &token,
+                       TokenType &tokenType);
+bool handleSingleQuotedToken(const string &inputString, size_t &i,
+                             string &token, TokenType &tokenType,
+                             std::vector<string> &tokens,
+                             std::vector<TokenType> &tokenTypes,
+                             bool &multiline);
+std::unordered_map<char, std::function<bool(const string &, size_t &, string &,
+                                            TokenType &, std::vector<string> &,
+                                            std::vector<TokenType> &, bool &)>>
+    specialTokenIndicator{{'\'', handleSingleQuotedToken}};
+
 void Parser::tokenize(const string &inputString) {
-  bool quoted = false;
   std::string token;
-  bool concatWithPrevious = false;
   TokenType tokenType;
   size_t l, r;
   l = r = skipWhitespace(inputString);
+
   while (r < inputString.size()) {
-    if (inputString[r] == '\'') {
-      quoted = true;
-      // no need to boundry check since the input string is already padded
-      // with a space in the main loop
-      if (!std::isspace(inputString[r - 1]))
-        concatWithPrevious = true;
-      r++;
-    }
-    if (!quoted) {
-      while (r < inputString.size() && !std::isspace(inputString[r])) {
-        if (inputString[r] == '\'') {
-          break;
-        }
-        token += inputString[r];
-        r++;
+    if (specialTokenIndicator.contains(inputString[r])) {
+      if (!specialTokenIndicator[inputString[r]](inputString, r, token,
+                                                 tokenType, tokens, tokenTypes,
+                                                 multiLineCommand)) {
+        l = r = skipWhitespace(inputString, r);
+        continue;
       }
-      token = expandToken(token);
-      tokenType = TokenType::Processed;
-
     } else {
-      if (concatWithPrevious) {
-        token += tokens[tokens.size() - 1];
-        tokens.pop_back();
-        tokenTypes.pop_back();
-      }
-
-      while (r < inputString.size() && inputString[r] != '\'') {
-        if (r > inputString.size()) {
-          multiLineCommand = true;
-          r++;
-          break;
-        }
-        token += inputString[r];
-        r++;
-      }
-      quoted = false;
-      tokenType = TokenType::Literal;
+      handleNormalToken(inputString, r, token, tokenType);
     }
-    r++;
+
     tokens.push_back(token);
     tokenTypes.push_back(tokenType);
     token = "";
     l = r = skipWhitespace(inputString, r);
   }
+  // std::println("{}", tokens);
+}
+
+void handleNormalToken(const string &inputString, size_t &i, string &token,
+                       TokenType &tokenType) {
+  while (i < inputString.size() && !std::isspace(inputString[i]) &&
+         !specialTokenIndicator.contains(inputString[i])) {
+    token += inputString[i];
+    i++;
+  }
+  token = expandToken(token);
+  tokenType = TokenType::Processed;
+}
+
+bool handleSingleQuotedToken(const string &inputString, size_t &i,
+                             string &token, TokenType &tokenType,
+                             std::vector<string> &tokens,
+                             std::vector<TokenType> &tokenTypes,
+                             bool &multiline) {
+  if (inputString[i + 1] == '\'') {
+    i += 2;
+    return false;
+  }
+
+  // concatWithPrevious
+  if (!std::isspace(inputString[i - 1])) {
+    token += tokens[tokens.size() - 1]; // TODO: check if it even exists
+    tokens.pop_back();
+    tokenTypes.pop_back();
+  }
+  i++;
+  while (inputString[i] != '\'' && i < inputString.size()) {
+    token += inputString[i];
+    i++;
+  }
+  if (i == inputString.size()) {
+    multiline = true;
+    return false;
+  }
+  i++;
+  tokenType = TokenType::Literal;
+  return true;
 }
 
 void Parser::extractArguments() {
