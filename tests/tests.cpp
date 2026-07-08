@@ -222,6 +222,28 @@ TEST(parserTest,
   EXPECT_EQ(parser.isNoArguments(), false);
   EXPECT_EQ(parser.isMultiLineCommand(), false);
 }
+
+TEST(parserTest,
+     proper_backslash_handling_in_double_quoted_tokens__escaping_backslash) {
+  std::vector<std::string> mockhistory;
+  Parser parser(" echo \"A \\ escapes itself\" ", mockhistory);
+  EXPECT_EQ(parser.getArguments()[0], "A \\ escapes itself");
+  EXPECT_EQ(parser.getArguments().size(), 1);
+  EXPECT_EQ(parser.getCommand(), "echo");
+  EXPECT_EQ(parser.isNoArguments(), false);
+  EXPECT_EQ(parser.isMultiLineCommand(), false);
+}
+TEST(
+    parserTest,
+    proper_backslash_handling_in_double_quoted_tokens__escaping_double_quotes) {
+  std::vector<std::string> mockhistory;
+  Parser parser(" echo \"A \\\" inside double quotes\" ", mockhistory);
+  EXPECT_EQ(parser.getArguments()[0], "A \" inside double quotes");
+  EXPECT_EQ(parser.getArguments().size(), 1);
+  EXPECT_EQ(parser.getCommand(), "echo");
+  EXPECT_EQ(parser.isNoArguments(), false);
+  EXPECT_EQ(parser.isMultiLineCommand(), false);
+}
 // TEST(ParserTest, single_quote_support){
 //   std::string mockinput = "hello world"
 // }

@@ -139,6 +139,17 @@ bool handleDoubleQuotedToken(const string &inputString, size_t &i,
 
   i++;
   while (inputString[i] != '"' && i < inputString.size()) {
+    if (inputString[i] == '\\' &&
+        i < inputString.size() -
+                3) /* -3 because you can't escape the closing quote (in the edge
+                      case that it's the last token, and \ is the last char) */
+    {
+      if (inputString[i + 1] == '"' || inputString[i + 1] == '\\') {
+        token += inputString[i + 1];
+        i += 2;
+        continue;
+      }
+    }
     token += inputString[i];
     i++;
   }
