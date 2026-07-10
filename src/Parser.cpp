@@ -23,152 +23,140 @@ Parser::Parser(const string &fullInput,
 // Private
 // input string is padded in the main loop so boundry checks aren't necessary
 // for a single index more/less than r
-void concatWithPrevious(const size_t i, string &token,
-                        std::vector<string> &tokens,
-                        std::vector<TokenType> &tokenTypes);
-void handleNormalToken(const string &inputString, size_t &i, string &token,
-                       TokenType &tokenType, std::vector<string> &tokens,
-                       std::vector<TokenType> &tokenTypes);
-bool handleSingleQuotedToken(const string &inputString, size_t &i,
-                             string &token, TokenType &tokenType,
-                             std::vector<string> &tokens,
-                             std::vector<TokenType> &tokenTypes,
-                             bool &multiline);
-bool handleDoubleQuotedToken(const string &inputString, size_t &i,
-                             string &token, TokenType &tokenType,
-                             std::vector<string> &tokens,
-                             std::vector<TokenType> &tokenTypes,
-                             bool &multiline);
-std::unordered_map<char, std::function<bool(const string &, size_t &, string &,
-                                            TokenType &, std::vector<string> &,
-                                            std::vector<TokenType> &, bool &)>>
+
+struct TokenizerState {
+  const string &inputString;
+  size_t &i;
+  string &token;
+  TokenType &tokenType;
+  std::vector<string> &tokens;
+  std::vector<TokenType> &tokenTypes;
+  bool &multiLineCommand;
+};
+void concatWithPrevious(TokenizerState &ts);
+void handleNormalToken(TokenizerState &ts);
+bool handleSingleQuotedToken(TokenizerState &ts);
+bool handleDoubleQuotedToken(TokenizerState &ts);
+bool handleRedirections(TokenizerState &ts);
+std::unordered_map<char, std::function<bool(TokenizerState &)>>
     specialTokenIndicator{{'\'', handleSingleQuotedToken},
-                          {'"', handleDoubleQuotedToken}};
+                          {'"', handleDoubleQuotedToken},
+                          {'>', handleRedirections}};
 
 std::unordered_set<char> concatSpeciaIndicators{'\'', '"'};
 
 void Parser::tokenize(const string &inputString) {
   std::string token;
   TokenType tokenType;
-  size_t l, r;
-  l = r = skipWhitespace(inputString);
+  size_t r;
+  TokenizerState ts(inputString, r, token, tokenType, tokens, tokenTypes,
+                    multiLineCommand);
+  r = skipWhitespace(inputString);
 
   while (r < inputString.size()) {
     if (specialTokenIndicator.contains(inputString[r])) {
-      if (!specialTokenIndicator[inputString[r]](inputString, r, token,
-                                                 tokenType, tokens, tokenTypes,
-                                                 multiLineCommand)) {
-        l = r = skipWhitespace(inputString, r);
+      if (!specialTokenIndicator[inputString[r]](ts)) {
+        r = skipWhitespace(inputString, r);
         continue;
       }
     } else {
-      handleNormalToken(inputString, r, token, tokenType, tokens, tokenTypes);
+      handleNormalToken(ts);
     }
 
     tokens.push_back(token);
     tokenTypes.push_back(tokenType);
     token = "";
-    l = r = skipWhitespace(inputString, r);
+    r = skipWhitespace(inputString, r);
   }
   // std::println("{}", tokens);
 }
 
-void handleNormalToken(const string &inputString, size_t &i, string &token,
-                       TokenType &tokenType, std::vector<string> &tokens,
-                       std::vector<TokenType> &tokenTypes) {
-  if (concatSpeciaIndicators.contains(inputString[i - 1])) {
-    concatWithPrevious(i, token, tokens, tokenTypes);
+void handleNormalToken(TokenizerState &ts) {
+  if (concatSpeciaIndicators.contains(ts.inputString[ts.i - 1])) {
+    concatWithPrevious(ts);
   }
-  while (i < inputString.size() && !std::isspace(inputString[i]) &&
-         !specialTokenIndicator.contains(inputString[i])) {
-    if (inputString[i] == '\\' &&
-        i < inputString.size() - 2) /* -2 because the input is padded */ {
-      token += inputString[i + 1];
-      i += 2;
+  while (ts.i < ts.inputString.size() && !std::isspace(ts.inputString[ts.i]) &&
+         !specialTokenIndicator.contains(ts.inputString[ts.i])) {
+    if (ts.inputString[ts.i] == '\\' &&
+        ts.i < ts.inputString.size() - 2) /* -2 because the input is padded */ {
+      ts.token += ts.inputString[ts.i + 1];
+      ts.i += 2;
       continue;
     }
-    token += inputString[i];
-    i++;
+    ts.token += ts.inputString[ts.i];
+    ts.i++;
   }
-  token = expandToken(token);
-  tokenType = TokenType::Raw;
+  ts.token = expandToken(ts.token);
+  ts.tokenType = TokenType::Raw;
 }
 
-bool handleSingleQuotedToken(const string &inputString, size_t &i,
-                             string &token, TokenType &tokenType,
-                             std::vector<string> &tokens,
-                             std::vector<TokenType> &tokenTypes,
-                             bool &multiline) {
-  if (inputString[i + 1] == '\'') {
-    i += 2;
+bool handleSingleQuotedToken(TokenizerState &ts) {
+  if (ts.inputString[ts.i + 1] == '\'') {
+    ts.i += 2;
     return false;
   }
 
   // concatWithPrevious
-  if (!std::isspace(inputString[i - 1])) {
-    concatWithPrevious(i, token, tokens, tokenTypes);
+  if (!std::isspace(ts.inputString[ts.i - 1])) {
+    concatWithPrevious(ts);
   }
 
-  i++;
-  while (inputString[i] != '\'' && i < inputString.size()) {
-    token += inputString[i];
-    i++;
+  ts.i++;
+  while (ts.inputString[ts.i] != '\'' && ts.i < ts.inputString.size()) {
+    ts.token += ts.inputString[ts.i];
+    ts.i++;
   }
-  if (i == inputString.size()) {
-    multiline = true;
+  if (ts.i == ts.inputString.size()) {
+    ts.multiLineCommand = true;
     return false;
   }
-  i++;
-  tokenType = TokenType::SingleQuoted;
+  ts.i++;
+  ts.tokenType = TokenType::SingleQuoted;
   return true;
 }
-bool handleDoubleQuotedToken(const string &inputString, size_t &i,
-                             string &token, TokenType &tokenType,
-                             std::vector<string> &tokens,
-                             std::vector<TokenType> &tokenTypes,
-                             bool &multiline) {
-  if (inputString[i + 1] == '"') {
-    i += 2;
+bool handleDoubleQuotedToken(TokenizerState &ts) {
+  if (ts.inputString[ts.i + 1] == '"') {
+    ts.i += 2;
     return false;
   }
 
   // concatWithPrevious
-  if (!std::isspace(inputString[i - 1])) {
-    concatWithPrevious(i, token, tokens, tokenTypes);
+  if (!std::isspace(ts.inputString[ts.i - 1])) {
+    concatWithPrevious(ts);
   }
 
-  i++;
-  while (inputString[i] != '"' && i < inputString.size()) {
-    if (inputString[i] == '\\' &&
-        i < inputString.size() -
+  ts.i++;
+  while (ts.inputString[ts.i] != '"' && ts.i < ts.inputString.size()) {
+    if (ts.inputString[ts.i] == '\\' &&
+        ts.i <
+            ts.inputString.size() -
                 3) /* -3 because you can't escape the closing quote (in the edge
                       case that it's the last token, and \ is the last char) */
     {
-      if (inputString[i + 1] == '"' || inputString[i + 1] == '\\') {
-        token += inputString[i + 1];
-        i += 2;
+      if (ts.inputString[ts.i + 1] == '"' || ts.inputString[ts.i + 1] == '\\') {
+        ts.token += ts.inputString[ts.i + 1];
+        ts.i += 2;
         continue;
       }
     }
-    token += inputString[i];
-    i++;
+    ts.token += ts.inputString[ts.i];
+    ts.i++;
   }
-  if (i == inputString.size()) {
-    multiline = true;
+  if (ts.i == ts.inputString.size()) {
+    ts.multiLineCommand = true;
     return false;
   }
-  i++;
-  tokenType = TokenType::DoubleQuoted;
+  ts.i++;
+  ts.tokenType = TokenType::DoubleQuoted;
   return true;
 }
-void concatWithPrevious(const size_t i, string &token,
-                        std::vector<string> &tokens,
-                        std::vector<TokenType> &tokenTypes) {
-  if (tokens.empty())
+bool handleRedirections(TokenizerState &ts) { return true; }
+void concatWithPrevious(TokenizerState &ts) {
+  if (ts.tokens.empty())
     return;
-  token += tokens[tokens.size() - 1];
-  tokens.pop_back();
-  tokenTypes.pop_back();
+  ts.token += ts.tokens[ts.tokens.size() - 1];
+  ts.tokens.pop_back();
+  ts.tokenTypes.pop_back();
 }
 
 void Parser::extractArguments() {
