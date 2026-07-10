@@ -1,4 +1,5 @@
 #include "string_utils.hpp"
+#include <algorithm>
 #include <cctype>
 
 size_t skipWhitespace(const std::string &str, size_t startIndex) {
@@ -35,4 +36,11 @@ std::string expandToken(const std::string &str) {
       finalToken += str[i];
   }
   return finalToken;
+}
+
+bool isPositiveInteger(const std::string &str) {
+  if (str.empty())
+    return false;
+  return std::all_of(str.begin(), str.end(),
+                     [](unsigned char c) { return std::isdigit(c); });
 }

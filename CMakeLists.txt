@@ -3,7 +3,7 @@ project(shell-starter-cpp)
 
 set(CMAKE_CXX_STANDARD 23)
 
-file(GLOB_RECURSE CORE_SOURCES src/string_utils.cpp src/Parser.cpp)
+file(GLOB_RECURSE CORE_SOURCES src/string_utils.cpp src/Parser.cpp src/redirect.cpp)
 
 add_executable(shell src/main.cpp ${CORE_SOURCES}) 
 target_link_libraries(shell PRIVATE readline)

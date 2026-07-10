@@ -4,8 +4,9 @@
 #include <cctype>
 #include <cstddef>
 #include <functional>
-#include <print>
+// #include <print>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -16,8 +17,7 @@ using strVector = std::vector<std::string>;
 Parser::Parser(const string &fullInput,
                const std::vector<std::string> &history) {
   tokenize(fullInput);
-  extractCommand();
-  extractArguments();
+  parse();
 }
 
 // Private
@@ -34,14 +34,14 @@ struct TokenizerState {
   bool &multiLineCommand;
 };
 void concatWithPrevious(TokenizerState &ts);
-void handleNormalToken(TokenizerState &ts);
-bool handleSingleQuotedToken(TokenizerState &ts);
-bool handleDoubleQuotedToken(TokenizerState &ts);
-bool handleRedirections(TokenizerState &ts);
+void tokenizeNormalToken(TokenizerState &ts);
+bool tokenizeSingleQuotedToken(TokenizerState &ts);
+bool tokenizeDoubleQuotedToken(TokenizerState &ts);
+bool tokenizeRedirections(TokenizerState &ts);
 std::unordered_map<char, std::function<bool(TokenizerState &)>>
-    specialTokenIndicator{{'\'', handleSingleQuotedToken},
-                          {'"', handleDoubleQuotedToken},
-                          {'>', handleRedirections}};
+    specialTokenIndicator{{'\'', tokenizeSingleQuotedToken},
+                          {'"', tokenizeDoubleQuotedToken},
+                          {'>', tokenizeRedirections}};
 
 std::unordered_set<char> concatSpeciaIndicators{'\'', '"'};
 
@@ -60,7 +60,7 @@ void Parser::tokenize(const string &inputString) {
         continue;
       }
     } else {
-      handleNormalToken(ts);
+      tokenizeNormalToken(ts);
     }
 
     tokens.push_back(token);
@@ -71,7 +71,7 @@ void Parser::tokenize(const string &inputString) {
   // std::println("{}", tokens);
 }
 
-void handleNormalToken(TokenizerState &ts) {
+void tokenizeNormalToken(TokenizerState &ts) {
   if (concatSpeciaIndicators.contains(ts.inputString[ts.i - 1])) {
     concatWithPrevious(ts);
   }
@@ -90,7 +90,7 @@ void handleNormalToken(TokenizerState &ts) {
   ts.tokenType = TokenType::Raw;
 }
 
-bool handleSingleQuotedToken(TokenizerState &ts) {
+bool tokenizeSingleQuotedToken(TokenizerState &ts) {
   if (ts.inputString[ts.i + 1] == '\'') {
     ts.i += 2;
     return false;
@@ -114,7 +114,7 @@ bool handleSingleQuotedToken(TokenizerState &ts) {
   ts.tokenType = TokenType::SingleQuoted;
   return true;
 }
-bool handleDoubleQuotedToken(TokenizerState &ts) {
+bool tokenizeDoubleQuotedToken(TokenizerState &ts) {
   if (ts.inputString[ts.i + 1] == '"') {
     ts.i += 2;
     return false;
@@ -150,7 +150,22 @@ bool handleDoubleQuotedToken(TokenizerState &ts) {
   ts.tokenType = TokenType::DoubleQuoted;
   return true;
 }
-bool handleRedirections(TokenizerState &ts) { return true; }
+bool tokenizeRedirections(TokenizerState &ts) {
+  if (!ts.tokens.empty() && ts.inputString[ts.i - 1] != ' ' &&
+      isPositiveInteger(ts.tokens[ts.tokens.size() - 1])) {
+    ts.tokenTypes.pop_back();
+    ts.tokenTypes.push_back(TokenType::RedirectionFileDescriptor);
+  }
+  ts.token += ts.inputString[ts.i];
+  ts.i++;
+  if (ts.inputString[ts.i] == ts.inputString[ts.i - 1]) {
+    ts.token += ts.inputString[ts.i];
+    ts.i++;
+  }
+  ts.tokenType = TokenType::Redirection;
+
+  return true;
+}
 void concatWithPrevious(TokenizerState &ts) {
   if (ts.tokens.empty())
     return;
@@ -159,15 +174,54 @@ void concatWithPrevious(TokenizerState &ts) {
   ts.tokenTypes.pop_back();
 }
 
-void Parser::extractArguments() {
-  for (size_t i = 1; i < tokens.size(); i++) {
-    arguments.push_back(tokens[i]);
-  }
-  if (arguments.empty())
-    noArguments = true;
-}
+std::unordered_map<string, RedirectionType> redirectionTokenToType{
+    {">", RedirectionType::OverwriteOutputRedirection},
+    {">>", RedirectionType::AppendOutputRedirection}};
 
-void Parser::extractCommand() { command = tokens.empty() ? "" : tokens[0]; }
+void Parser::parse() {
+  if (tokens.empty())
+    return;
+  // parse redirections
+  for (size_t i = 0; i < tokens.size(); i++) {
+    if (tokenTypes[i] == TokenType::Redirection) {
+      RedirectionType redirectionType = redirectionTokenToType[tokens[i]];
+      int redirectionFileDescriptor =
+          (i > 0 && tokenTypes[i - 1] == TokenType::RedirectionFileDescriptor)
+              ? std::stoi(tokens[i - 1])
+              : 1; // TODO: change the fallback filedesc after implementing
+                   // input redirections
+
+      string redirectionTarget;
+      if (i < tokens.size() - 1 &&
+          (tokenTypes[i + 1] == TokenType::Raw ||
+           tokenTypes[i + 1] == TokenType::DoubleQuoted ||
+           tokenTypes[i + 1] == TokenType::SingleQuoted)) {
+        redirectionTarget = tokens[i + 1];
+        tokenTypes[i + 1] = TokenType::RedirectionTarget;
+      }
+      Redirection redirection{redirectionType, redirectionFileDescriptor,
+                              redirectionTarget};
+      redirections.push_back(redirection);
+    }
+  }
+  size_t i = 0;
+  // parse command
+  while (command.empty() && i < tokens.size()) {
+    if (command.empty() && (tokenTypes[i] == TokenType::Raw ||
+                            tokenTypes[i] == TokenType::DoubleQuoted ||
+                            tokenTypes[i] == TokenType::SingleQuoted))
+      command = tokens[i];
+    i++;
+  }
+  // parse arguments
+  while (i < tokens.size()) {
+    if (tokenTypes[i] == TokenType::Raw ||
+        tokenTypes[i] == TokenType::DoubleQuoted ||
+        tokenTypes[i] == TokenType::SingleQuoted)
+      arguments.push_back(tokens[i]);
+    i++;
+  }
+}
 
 // Public
 string Parser::getCommand() const { return command; }
@@ -175,6 +229,9 @@ const strVector Parser::getArguments() const { return arguments; }
 bool Parser::isNoArguments() const { return noArguments; }
 bool Parser::isMultiLineCommand() const { return multiLineCommand; }
 const std::vector<std::string> &Parser::getTokens() const { return tokens; }
+const std::vector<Redirection> &Parser::getRedirections() const {
+  return redirections;
+}
 
 std::vector<string> Parser::get_null_terminated_args() const {
   std::vector<string> output;

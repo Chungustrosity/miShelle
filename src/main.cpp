@@ -1,4 +1,4 @@
-#include <cctype>
+// #include <cctype>
 #include <cstdlib>
 #include <filesystem>
 #include <functional>
@@ -11,6 +11,7 @@
 #include <sys/wait.h>
 
 #include "Parser.hpp"
+#include "redirect.hpp"
 
 namespace fs = std::filesystem;
 using std::cout;
@@ -21,7 +22,7 @@ using strVector = std::vector<std::string>;
 int echo_builtin(const Parser &parsedInput);
 int type_builtin(const Parser &parsedInput);
 int exit_builtin(const Parser &parsedInput);
-int execute(const Parser &parsedInput);
+int execute_external(const Parser &parsedInput);
 int pwd_builtin(const Parser &parsedInput);
 int cd_builtin(const Parser &parsedInput);
 
@@ -52,13 +53,15 @@ int main() {
       continue;
 
     if (builtins.contains(command)) {
+      applyRedirections(parsedInput.getRedirections());
       int exitCode = builtins[command](parsedInput);
       if (exitCode == 0)
         continue;
       if (exitCode == 1)
         break;
+      deApplyRedirections();
     } else {
-      execute(parsedInput);
+      execute_external(parsedInput);
     }
   }
 
@@ -188,7 +191,7 @@ int exit_builtin(const Parser &parsedInput) { return 1; }
 // TODO: refactor so you don't need to check if the command is
 // CommandType::external in the main loop just to apply some of the same logic
 // again here to get the filePath
-int execute(const Parser &parsedInput) {
+int execute_external(const Parser &parsedInput) {
   std::string command_string(parsedInput.getCommand());
   std::vector<string> args = parsedInput.get_null_terminated_args();
   std::vector<char *> argv;
@@ -199,6 +202,7 @@ int execute(const Parser &parsedInput) {
 
   pid_t pid = fork();
   if (pid == 0) {
+    applyRedirections(parsedInput.getRedirections());
     if (execvp(argv[0], argv.data()) == -1) {
       std::cerr << argv[0] << ": command not found\n";
       exit(1);
