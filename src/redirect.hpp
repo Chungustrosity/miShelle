@@ -25,7 +25,7 @@ struct ApplyRedirectionsReturnObject {
 };
 
 ApplyRedirectionsReturnObject
-applyRedirections(std::vector<Redirection> redirections);
+applyRedirections(const std::vector<Redirection> &redirections);
 
 void deApplyRedirections(
     const ApplyRedirectionsReturnObject &redirectReturnObj);
