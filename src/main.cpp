@@ -55,14 +55,14 @@ int main() {
     if (builtins.contains(command)) {
       ApplyRedirectionsReturnObject redReturn =
           applyRedirections(parsedInput.getRedirections());
-      if (redReturn.success) {
-        int exitCode = builtins[command](parsedInput);
-        if (exitCode == 0)
-          continue;
-        if (exitCode == 1)
-          break;
-      }
+      int exitCode = 0;
+      if (redReturn.success)
+        exitCode = builtins[command](parsedInput);
       deApplyRedirections(redReturn);
+      if (exitCode == 0)
+        continue;
+      if (exitCode == 1)
+        break;
     } else {
       execute_external(parsedInput);
     }

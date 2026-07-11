@@ -30,8 +30,7 @@ applyRedirections(const std::vector<Redirection> &redirections) {
 
 void deApplyRedirections(
     const ApplyRedirectionsReturnObject &redirectReturnObj) {
-  for (size_t i = redirectReturnObj.appliedRedirections.size() - 1; i >= 0;
-       i--) {
+  for (int i = redirectReturnObj.appliedRedirections.size() - 1; i >= 0; i--) {
     const auto &backup = redirectReturnObj.appliedRedirections[i];
     dup2(backup.backupFD, backup.interceptedStreamFD);
     close(backup.backupFD);
