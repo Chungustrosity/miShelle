@@ -10,6 +10,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <fcntl.h>
+
 using std::string;
 using std::string_view;
 using strVector = std::vector<std::string>;
@@ -176,7 +178,23 @@ void concatWithPrevious(TokenizerState &ts) {
 
 std::unordered_map<string, RedirectionType> redirectionTokenToType{
     {">", RedirectionType::OverwriteOutputRedirection},
-    {">>", RedirectionType::AppendOutputRedirection}};
+    {">>", RedirectionType::AppendOutputRedirection},
+    {"<", RedirectionType::InputRedirection}};
+void initRedirection(Redirection &redi) {
+  switch (redi.redirectionType) {
+  case RedirectionType::OverwriteOutputRedirection:
+    redi.FileDescriptor = 1;
+    redi.flags = (O_WRONLY | O_CREAT | O_TRUNC);
+    break;
+  case RedirectionType::AppendOutputRedirection:
+    redi.FileDescriptor = 1;
+    redi.flags = (O_WRONLY | O_CREAT | O_APPEND);
+    break;
+  case RedirectionType::InputRedirection:
+    redi.FileDescriptor = 0;
+    redi.flags = (O_RDONLY);
+  }
+}
 
 void Parser::parse() {
   if (tokens.empty())
@@ -184,24 +202,19 @@ void Parser::parse() {
   // parse redirections
   for (size_t i = 0; i < tokens.size(); i++) {
     if (tokenTypes[i] == TokenType::Redirection) {
-      RedirectionType redirectionType = redirectionTokenToType[tokens[i]];
-      int redirectionFileDescriptor =
-          (i > 0 && tokenTypes[i - 1] == TokenType::RedirectionFileDescriptor)
-              ? std::stoi(tokens[i - 1])
-              : 1; // TODO: change the fallback filedesc after implementing
-                   // input redirections
-
-      string redirectionTarget;
+      Redirection redi;
+      redi.redirectionType = redirectionTokenToType[tokens[i]];
+      initRedirection(redi);
+      if (i > 0 && tokenTypes[i - 1] == TokenType::RedirectionFileDescriptor)
+        redi.FileDescriptor = std::stoi(tokens[i - 1]);
       if (i < tokens.size() - 1 &&
           (tokenTypes[i + 1] == TokenType::Raw ||
            tokenTypes[i + 1] == TokenType::DoubleQuoted ||
            tokenTypes[i + 1] == TokenType::SingleQuoted)) {
-        redirectionTarget = tokens[i + 1];
+        redi.target = tokens[i + 1];
         tokenTypes[i + 1] = TokenType::RedirectionTarget;
       }
-      Redirection redirection{redirectionType, redirectionFileDescriptor,
-                              redirectionTarget};
-      redirections.push_back(redirection);
+      redirections.push_back(redi);
     }
   }
   size_t i = 0;

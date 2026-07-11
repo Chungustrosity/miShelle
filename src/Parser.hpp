@@ -1,7 +1,6 @@
 #pragma once
 
-#include <string>
-#include <vector>
+#include "redirect.hpp"
 
 enum class TokenType {
   Raw,
@@ -10,16 +9,6 @@ enum class TokenType {
   Redirection,
   RedirectionFileDescriptor,
   RedirectionTarget
-};
-enum class RedirectionType {
-  OverwriteOutputRedirection,
-  AppendOutputRedirection
-};
-
-struct Redirection {
-  RedirectionType redirectionType;
-  int FileDescriptor = 1;
-  std::string target;
 };
 
 class Parser {
