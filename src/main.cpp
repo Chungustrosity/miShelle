@@ -196,8 +196,9 @@ int exit_builtin(const Parser &parsedInput) { return 1; }
 // again here to get the filePath
 int execute_external(const Parser &parsedInput) {
   std::string command_string(parsedInput.getCommand());
-  std::vector<string> args = parsedInput.get_null_terminated_args();
+  std::vector<string> args = parsedInput.getArguments();
   std::vector<char *> argv;
+  argv.push_back(command_string.data());
   for (auto &arg : args) {
     argv.push_back(arg.data());
   }
