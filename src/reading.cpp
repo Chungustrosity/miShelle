@@ -5,8 +5,7 @@
 
 #include <readline/readline.h>
 
-std::vector<std::string> builtins_padded_list{"echo ", "type ", "exit ", "pwd ",
-                                              "cd "};
+std::vector<std::string> builtins_list{"echo", "type", "exit", "pwd", "cd"};
 
 char *command_generator(const char *text, int state) {
   static size_t list_index;
@@ -17,8 +16,8 @@ char *command_generator(const char *text, int state) {
     len = strlen(text);
   }
 
-  while (list_index < builtins_padded_list.size()) {
-    const std::string &name = builtins_padded_list[list_index];
+  while (list_index < builtins_list.size()) {
+    const std::string &name = builtins_list[list_index];
     list_index++;
     if (strncmp(name.c_str(), text, len) == 0) {
       return strdup(name.c_str());
