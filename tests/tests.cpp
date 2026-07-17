@@ -21,7 +21,7 @@ TEST(string_utils_test, expand_tilde) {
 TEST(tokenizerTest, extracts_command_and_args_correctly) {
   std::string mockinput = " echo hellow world ";
   std::vector<std::string> mockhistory;
-  Parser parser(mockinput, mockhistory);
+  Parser parser(mockinput);
   EXPECT_EQ(parser.getCommand(), "echo");
   EXPECT_EQ(parser.getArguments()[0], "hellow");
   EXPECT_EQ(parser.getArguments()[1], "world");
@@ -37,29 +37,29 @@ TEST(tokenizerTest, tokenization) {
   std::string full3 = " ls ./damn ";
   std::string full4 = " cd ~/bin ";
 
-  Parser parser(empty, mockhistory);
+  Parser parser(empty);
   EXPECT_EQ(parser.getTokens().empty(), true);
 
-  Parser parser2(command, mockhistory);
+  Parser parser2(command);
   EXPECT_EQ(parser2.getTokens().size(), 1);
   EXPECT_EQ(parser2.getTokens()[0], "cd");
 
-  Parser parser3(full, mockhistory);
+  Parser parser3(full);
   EXPECT_EQ(parser3.getTokens().size(), 3);
   EXPECT_EQ(parser3.getTokens()[0], "echo");
   EXPECT_EQ(parser3.getTokens()[1], "hello");
   EXPECT_EQ(parser3.getTokens()[2], "world");
 
-  Parser parser4(full2, mockhistory);
+  Parser parser4(full2);
   EXPECT_EQ(parser4.getTokens().size(), 1);
   EXPECT_EQ(parser4.getTokens()[0], "pwd");
 
-  Parser parser5(full3, mockhistory);
+  Parser parser5(full3);
   EXPECT_EQ(parser5.getTokens().size(), 2);
   EXPECT_EQ(parser5.getTokens()[0], "ls");
   EXPECT_EQ(parser5.getTokens()[1], "./damn");
 
-  Parser parser6(full4, mockhistory);
+  Parser parser6(full4);
   EXPECT_EQ(parser6.getTokens().size(), 2);
   EXPECT_EQ(parser6.getTokens()[0], "cd");
 }
@@ -67,13 +67,13 @@ TEST(tokenizerTest, tokenization) {
 TEST(tokenizerTest, expand_telde_correctly) {
   std::string mockinput = " echo ~/bin ";
   std::vector<std::string> mockhistory;
-  Parser parser(mockinput, mockhistory);
+  Parser parser(mockinput);
   EXPECT_EQ(parser.isMultiLineCommand(), false);
   EXPECT_EQ(parser.getTokens()[0], "echo");
   EXPECT_EQ(parser.getTokens()[1], "/home/panties/bin");
 
   std::string mockinput2 = " cd ~ ";
-  Parser parser2(mockinput2, mockhistory);
+  Parser parser2(mockinput2);
   EXPECT_EQ(parser2.isMultiLineCommand(), false);
   EXPECT_EQ(parser2.getTokens()[0], "cd");
   EXPECT_EQ(parser2.getTokens()[1], "/home/panties");
@@ -81,7 +81,7 @@ TEST(tokenizerTest, expand_telde_correctly) {
 
 TEST(tokenizerTest, parse_single_quotes_literally) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo '~ boobs are good' ", mockhistory);
+  Parser parser(" echo '~ boobs are good' ");
   EXPECT_EQ(parser.getCommand(), "echo");
   EXPECT_EQ(parser.isMultiLineCommand(), false);
   EXPECT_EQ(parser.getArguments()[0], "~ boobs are good");
@@ -90,7 +90,7 @@ TEST(tokenizerTest, parse_single_quotes_literally) {
 
 TEST(tokenizerTest, join_two_touching_single_quoted_tokens) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo 'boobs ''are'' good' ", mockhistory);
+  Parser parser(" echo 'boobs ''are'' good' ");
   EXPECT_EQ(parser.getArguments().size(), 1);
   EXPECT_EQ(parser.getCommand(), "echo");
   EXPECT_EQ(parser.getArguments()[0], "boobs are good");
@@ -99,7 +99,7 @@ TEST(tokenizerTest, join_two_touching_single_quoted_tokens) {
 }
 TEST(tokenizerTest, concat_single_quoted_strings_with_the_previous_token) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo hi' boobs' ", mockhistory);
+  Parser parser(" echo hi' boobs' ");
   EXPECT_EQ(parser.getCommand(), "echo");
   EXPECT_EQ(parser.getArguments().size(), 1);
   EXPECT_EQ(parser.getArguments()[0], "hi boobs");
@@ -108,7 +108,7 @@ TEST(tokenizerTest, concat_single_quoted_strings_with_the_previous_token) {
 }
 TEST(tokenizerTest, concat_single_quoted_strings_with_tailing_token) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo 'boobs 'hi ", mockhistory);
+  Parser parser(" echo 'boobs 'hi ");
   EXPECT_EQ(parser.getCommand(), "echo");
   EXPECT_EQ(parser.getArguments().size(), 1);
   EXPECT_EQ(parser.getArguments()[0], "boobs hi");
@@ -118,7 +118,7 @@ TEST(tokenizerTest, concat_single_quoted_strings_with_tailing_token) {
 
 TEST(tokenizerTest, ignore_empty_single_quotes) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo '' hi' hello' 'boobs' '' ", mockhistory);
+  Parser parser(" echo '' hi' hello' 'boobs' '' ");
   EXPECT_EQ(parser.getArguments().size(), 2);
   EXPECT_EQ(parser.getCommand(), "echo");
   EXPECT_EQ(parser.getArguments()[0], "hi hello");
@@ -129,7 +129,7 @@ TEST(tokenizerTest, ignore_empty_single_quotes) {
 
 TEST(tokenizerTest, parse_double_quotes_literally) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo \"~ boobs are good\" ", mockhistory);
+  Parser parser(" echo \"~ boobs are good\" ");
   EXPECT_EQ(parser.getCommand(), "echo");
   EXPECT_EQ(parser.isMultiLineCommand(), false);
   EXPECT_EQ(parser.getArguments()[0], "~ boobs are good");
@@ -138,7 +138,7 @@ TEST(tokenizerTest, parse_double_quotes_literally) {
 
 TEST(tokenizerTest, join_two_touching_double_quoted_tokens) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo \"boobs \"\"are\"\" good\" ", mockhistory);
+  Parser parser(" echo \"boobs \"\"are\"\" good\" ");
   EXPECT_EQ(parser.getArguments().size(), 1);
   EXPECT_EQ(parser.getCommand(), "echo");
   EXPECT_EQ(parser.getArguments()[0], "boobs are good");
@@ -147,7 +147,7 @@ TEST(tokenizerTest, join_two_touching_double_quoted_tokens) {
 }
 TEST(tokenizerTest, concat_double_quoted_strings_with_the_previous_token) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo hi\" boobs\" ", mockhistory);
+  Parser parser(" echo hi\" boobs\" ");
   EXPECT_EQ(parser.getCommand(), "echo");
   EXPECT_EQ(parser.getArguments().size(), 1);
   EXPECT_EQ(parser.getArguments()[0], "hi boobs");
@@ -156,7 +156,7 @@ TEST(tokenizerTest, concat_double_quoted_strings_with_the_previous_token) {
 }
 TEST(tokenizerTest, concat_double_quoted_strings_with_tailing_token) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo \"boobs \"hi ", mockhistory);
+  Parser parser(" echo \"boobs \"hi ");
   EXPECT_EQ(parser.getCommand(), "echo");
   EXPECT_EQ(parser.getArguments().size(), 1);
   EXPECT_EQ(parser.getArguments()[0], "boobs hi");
@@ -165,7 +165,7 @@ TEST(tokenizerTest, concat_double_quoted_strings_with_tailing_token) {
 }
 TEST(tokenizerTest, ignore_empty_double_quotes) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo \"\" hi\" hello\" \"boobs\" \"\" ", mockhistory);
+  Parser parser(" echo \"\" hi\" hello\" \"boobs\" \"\" ");
   EXPECT_EQ(parser.getArguments().size(), 2);
   EXPECT_EQ(parser.getCommand(), "echo");
   EXPECT_EQ(parser.getArguments()[0], "hi hello");
@@ -176,7 +176,7 @@ TEST(tokenizerTest, ignore_empty_double_quotes) {
 
 TEST(tokenizerTest, proper_backslash_handling_in_raw_tokens) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo three\\ \\ \\ spaces ", mockhistory);
+  Parser parser(" echo three\\ \\ \\ spaces ");
   EXPECT_EQ(parser.getArguments()[0], "three   spaces");
   EXPECT_EQ(parser.getArguments().size(), 1);
   EXPECT_EQ(parser.getCommand(), "echo");
@@ -185,7 +185,7 @@ TEST(tokenizerTest, proper_backslash_handling_in_raw_tokens) {
 }
 TEST(tokenizerTest, proper_backslash_handling_in_raw_tokens__multi_arguments) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo before\\              after ", mockhistory);
+  Parser parser(" echo before\\              after ");
   EXPECT_EQ(parser.getArguments()[0], "before ");
   EXPECT_EQ(parser.getArguments()[1], "after");
   EXPECT_EQ(parser.getArguments().size(), 2);
@@ -196,7 +196,7 @@ TEST(tokenizerTest, proper_backslash_handling_in_raw_tokens__multi_arguments) {
 TEST(tokenizerTest,
      proper_backslash_handling_in_raw_tokens__none_special_characters) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo test\\nexample ", mockhistory);
+  Parser parser(" echo test\\nexample ");
   EXPECT_EQ(parser.getArguments()[0], "testnexample");
   EXPECT_EQ(parser.getArguments().size(), 1);
   EXPECT_EQ(parser.getCommand(), "echo");
@@ -206,7 +206,7 @@ TEST(tokenizerTest,
 TEST(tokenizerTest,
      proper_backslash_handling_in_raw_tokens__escaping_backslash) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo hello\\\\world ", mockhistory);
+  Parser parser(" echo hello\\\\world ");
   EXPECT_EQ(parser.getArguments()[0], "hello\\world");
   EXPECT_EQ(parser.getArguments().size(), 1);
   EXPECT_EQ(parser.getCommand(), "echo");
@@ -216,7 +216,7 @@ TEST(tokenizerTest,
 TEST(tokenizerTest,
      proper_backslash_handling_in_raw_tokens__escaping_single_quotes) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo \\'hello\\' ", mockhistory);
+  Parser parser(" echo \\'hello\\' ");
   EXPECT_EQ(parser.getArguments()[0], "'hello'");
   EXPECT_EQ(parser.getArguments().size(), 1);
   EXPECT_EQ(parser.getCommand(), "echo");
@@ -226,7 +226,7 @@ TEST(tokenizerTest,
 TEST(tokenizerTest,
      proper_backslash_handling_in_double_quoted_tokens__escaping_backslash) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo \"A \\ escapes itself\" ", mockhistory);
+  Parser parser(" echo \"A \\ escapes itself\" ");
   EXPECT_EQ(parser.getArguments()[0], "A \\ escapes itself");
   EXPECT_EQ(parser.getArguments().size(), 1);
   EXPECT_EQ(parser.getCommand(), "echo");
@@ -237,7 +237,7 @@ TEST(
     tokenizerTest,
     proper_backslash_handling_in_double_quoted_tokens__escaping_double_quotes) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo \"A \\\" inside double quotes\" ", mockhistory);
+  Parser parser(" echo \"A \\\" inside double quotes\" ");
   EXPECT_EQ(parser.getArguments()[0], "A \" inside double quotes");
   EXPECT_EQ(parser.getArguments().size(), 1);
   EXPECT_EQ(parser.getCommand(), "echo");
@@ -247,7 +247,7 @@ TEST(
 
 TEST(parserTest, handle_redirections) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo boobs >hi.txt ", mockhistory);
+  Parser parser(" echo boobs >hi.txt ");
   EXPECT_EQ(parser.getRedirections().size(), 1);
   EXPECT_EQ(parser.getRedirections()[0].FileDescriptor, 1);
   EXPECT_EQ(parser.getRedirections()[0].redirectionType,
@@ -261,7 +261,7 @@ TEST(parserTest, handle_redirections) {
 }
 TEST(parserTest, handle_redirections__multiple_command_arguments) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo boobs hi hey >hi.txt ", mockhistory);
+  Parser parser(" echo boobs hi hey >hi.txt ");
   EXPECT_EQ(parser.getRedirections().size(), 1);
   EXPECT_EQ(parser.getRedirections()[0].FileDescriptor, 1);
   EXPECT_EQ(parser.getRedirections()[0].redirectionType,
@@ -277,7 +277,7 @@ TEST(parserTest, handle_redirections__multiple_command_arguments) {
 }
 TEST(parserTest, handle_redirections__file_descriptor_specified) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo boobs hi hey 1>hi.txt ", mockhistory);
+  Parser parser(" echo boobs hi hey 1>hi.txt ");
   EXPECT_EQ(parser.getRedirections().size(), 1);
   EXPECT_EQ(parser.getRedirections()[0].FileDescriptor, 1);
   EXPECT_EQ(parser.getRedirections()[0].redirectionType,
@@ -293,7 +293,7 @@ TEST(parserTest, handle_redirections__file_descriptor_specified) {
 }
 TEST(parserTest, handle_redirections__file_descriptor_specified__foreign_fd) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo boobs hi hey 5>hi.txt ", mockhistory);
+  Parser parser(" echo boobs hi hey 5>hi.txt ");
   EXPECT_EQ(parser.getRedirections().size(), 1);
   EXPECT_EQ(parser.getRedirections()[0].FileDescriptor, 5);
   EXPECT_EQ(parser.getRedirections()[0].redirectionType,
@@ -309,7 +309,7 @@ TEST(parserTest, handle_redirections__file_descriptor_specified__foreign_fd) {
 }
 TEST(parserTest, handle__redirections__weirdly_placed__before_arguments) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo 5>hi.txt boobs hi hey ", mockhistory);
+  Parser parser(" echo 5>hi.txt boobs hi hey ");
   EXPECT_EQ(parser.getRedirections().size(), 1);
   EXPECT_EQ(parser.getRedirections()[0].FileDescriptor, 5);
   EXPECT_EQ(parser.getRedirections()[0].redirectionType,
@@ -325,7 +325,7 @@ TEST(parserTest, handle__redirections__weirdly_placed__before_arguments) {
 }
 TEST(parserTest, handle__redirections__weirdly_placed__mid_arguments) {
   std::vector<std::string> mockhistory;
-  Parser parser(" echo boobs 5>hi.txt hi hey ", mockhistory);
+  Parser parser(" echo boobs 5>hi.txt hi hey ");
   EXPECT_EQ(parser.getRedirections().size(), 1);
   EXPECT_EQ(parser.getRedirections()[0].FileDescriptor, 5);
   EXPECT_EQ(parser.getRedirections()[0].redirectionType,

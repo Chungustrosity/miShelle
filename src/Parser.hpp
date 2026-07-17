@@ -26,7 +26,9 @@ private:
   void parse();
 
 public:
-  Parser(const std::string &fullInput, const std::vector<std::string> &history);
+  Parser(const std::string &fullInput
+         // , const std::vector<std::string> &history
+  );
 
   std::string getCommand() const;
   const std::vector<std::string> getArguments() const;

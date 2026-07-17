@@ -11,7 +11,41 @@
 #include <sys/wait.h>
 
 #include "Parser.hpp"
+// #include "reading.cpp"
 #include "redirect.hpp"
+
+// #include <iostream>
+#include <readline/history.h>
+#include <readline/readline.h>
+// #include <cstring>
+// #include <cstdlib>
+
+std::vector<std::string> builtins_list{"echo", "type", "exit", "pwd", "cd"};
+
+char *command_generator(const char *text, int state) {
+  static size_t list_index;
+  static int len;
+
+  if (state == 0) {
+    list_index = 0;
+    len = strlen(text);
+  }
+
+  while (list_index < builtins_list.size()) {
+    const std::string &name = builtins_list[list_index];
+    list_index++;
+    if (strncmp(name.c_str(), text, len) == 0) {
+      return strdup(name.c_str());
+    }
+  }
+  return nullptr;
+}
+char **simpleBuiltinCompletion(const char *text, int start, int end) {
+  if (start == 0) {
+    return rl_completion_matches(text, command_generator);
+  }
+  return nullptr;
+}
 
 namespace fs = std::filesystem;
 using std::cout;
@@ -37,37 +71,68 @@ std::unordered_map<string, std::function<int(Parser &)>> builtins{
     {"cd", cd_builtin}};
 
 int main() {
-  std::vector<std::string> historyStack;
 
-  while (true) {
-    cout << "$ ";
+  rl_attempted_completion_function = simpleBuiltinCompletion;
+  char *input;
 
-    string fullInput;
-    std::getline(std::cin, fullInput);
-    fullInput = " " + fullInput + " ";
+  while ((input = readline("$ ")) != nullptr) {
+    if (*input) {
+      add_history(input);
 
-    Parser parsedInput(fullInput, historyStack);
-    string command = parsedInput.getCommand();
-    strVector arguments = parsedInput.getArguments();
-    if (command.empty())
-      continue;
-
-    if (builtins.contains(command)) {
-      ApplyRedirectionsReturnObject redReturn =
-          applyRedirections(parsedInput.getRedirections());
-      int exitCode = 0;
-      if (redReturn.success)
-        exitCode = builtins[command](parsedInput);
-      deApplyRedirections(redReturn);
-      if (exitCode == 0)
+      Parser parsedInput(input);
+      string command = parsedInput.getCommand();
+      strVector arguments = parsedInput.getArguments();
+      if (command.empty())
         continue;
-      if (exitCode == 1)
-        break;
-    } else {
-      execute_external(parsedInput);
+
+      if (builtins.contains(command)) {
+        ApplyRedirectionsReturnObject redReturn =
+            applyRedirections(parsedInput.getRedirections());
+        int exitCode = 0;
+        if (redReturn.success)
+          exitCode = builtins[command](parsedInput);
+        deApplyRedirections(redReturn);
+        if (exitCode == 0)
+          continue;
+        if (exitCode == 1)
+          break;
+      } else {
+        execute_external(parsedInput);
+      }
     }
+    free(input);
   }
 
+  // std::vector<std::string> historyStack;
+  // while (true) {
+  //   cout << "$ ";
+  //
+  //   string fullInput;
+  //   std::getline(std::cin, fullInput);
+  //   fullInput = " " + fullInput + " ";
+  //
+  //   Parser parsedInput(fullInput, historyStack);
+  //   string command = parsedInput.getCommand();
+  //   strVector arguments = parsedInput.getArguments();
+  //   if (command.empty())
+  //     continue;
+  //
+  //   if (builtins.contains(command)) {
+  //     ApplyRedirectionsReturnObject redReturn =
+  //         applyRedirections(parsedInput.getRedirections());
+  //     int exitCode = 0;
+  //     if (redReturn.success)
+  //       exitCode = builtins[command](parsedInput);
+  //     deApplyRedirections(redReturn);
+  //     if (exitCode == 0)
+  //       continue;
+  //     if (exitCode == 1)
+  //       break;
+  //   } else {
+  //     execute_external(parsedInput);
+  //   }
+  // }
+  //
   return 0;
 }
 
