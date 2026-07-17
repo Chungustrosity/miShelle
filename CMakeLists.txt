@@ -3,7 +3,7 @@ project(shell-starter-cpp)
 
 set(CMAKE_CXX_STANDARD 23)
 
-file(GLOB_RECURSE CORE_SOURCES src/string_utils.cpp src/Parser.cpp src/redirect.cpp src/reading.cpp)
+file(GLOB_RECURSE CORE_SOURCES src/string_utils.cpp src/Parser.cpp src/redirect.cpp src/builtins.cpp src/reading.cpp)
 
 add_executable(shell src/main.cpp ${CORE_SOURCES}) 
 target_link_libraries(shell PRIVATE readline)
@@ -24,7 +24,7 @@ enable_testing()
 
 add_executable(run_tests tests/tests.cpp ${CORE_SOURCES})
 
-target_link_libraries(run_tests PRIVATE gtest_main)
+target_link_libraries(run_tests PRIVATE gtest_main readline)
 
 include(GoogleTest)
 gtest_discover_tests(run_tests)
