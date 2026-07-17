@@ -78,8 +78,9 @@ int main() {
   while ((input = readline("$ ")) != nullptr) {
     if (*input) {
       add_history(input);
+      std::string paddedInput = std::string(" ") + input + " ";
 
-      Parser parsedInput(input);
+      Parser parsedInput(paddedInput);
       string command = parsedInput.getCommand();
       strVector arguments = parsedInput.getArguments();
       if (command.empty())
