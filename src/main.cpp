@@ -1,24 +1,17 @@
-// #include <cctype>
 #include <cstdlib>
-// #include <functional>
-// #include <iostream>
 #include <string>
-// #include <unordered_map>
 #include <vector>
 
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include <readline/history.h>
+#include <readline/readline.h>
+
 #include "Parser.hpp"
 #include "builtins.hpp"
 #include "reading.hpp"
 #include "redirect.hpp"
-
-// #include <iostream>
-#include <readline/history.h>
-#include <readline/readline.h>
-// #include <cstring>
-// #include <cstdlib>
 
 using string = std::string;
 using string_view = std::string_view;
@@ -66,36 +59,5 @@ int main() {
     }
     free(input);
   }
-
-  // std::vector<std::string> historyStack;
-  // while (true) {
-  //   cout << "$ ";
-  //
-  //   string fullInput;
-  //   std::getline(std::cin, fullInput);
-  //   fullInput = " " + fullInput + " ";
-  //
-  //   Parser parsedInput(fullInput, historyStack);
-  //   string command = parsedInput.getCommand();
-  //   strVector arguments = parsedInput.getArguments();
-  //   if (command.empty())
-  //     continue;
-  //
-  //   if (builtins.contains(command)) {
-  //     ApplyRedirectionsReturnObject redReturn =
-  //         applyRedirections(parsedInput.getRedirections());
-  //     int exitCode = 0;
-  //     if (redReturn.success)
-  //       exitCode = builtins[command](parsedInput);
-  //     deApplyRedirections(redReturn);
-  //     if (exitCode == 0)
-  //       continue;
-  //     if (exitCode == 1)
-  //       break;
-  //   } else {
-  //     execute_external(parsedInput);
-  //   }
-  // }
-  //
   return 0;
 }

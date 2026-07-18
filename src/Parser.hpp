@@ -37,7 +37,6 @@ public:
   const std::vector<std::string> getArguments() const;
   bool isNoArguments() const;
   bool isMultiLineCommand() const;
-  std::vector<std::string> get_null_terminated_args() const;
   const std::vector<std::string> &getTokens() const;
   const std::vector<TokenType> &getTokenTypes() const;
   const std::vector<Redirection> &getRedirections() const;

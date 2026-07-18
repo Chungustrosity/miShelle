@@ -251,12 +251,3 @@ const std::vector<TokenType> &Parser::getTokenTypes() const {
 const std::vector<Redirection> &Parser::getRedirections() const {
   return redirections;
 }
-
-std::vector<string> Parser::get_null_terminated_args() const {
-  std::vector<string> output;
-  output.push_back(string(command));
-  for (auto &arg : arguments) {
-    output.push_back(string(arg));
-  }
-  return output;
-}
