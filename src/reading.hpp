@@ -1,4 +1,4 @@
 #pragma once
 
-char *command_generator(const char *text, int state);
+void gatherCommands();
 char **contextAwareCompletion(const char *text, int start, int end);

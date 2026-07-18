@@ -34,7 +34,7 @@ int cd_builtin(const Parser &parsedInput);
 CommandType findCommandType(const string &command);
 
 int main() {
-
+  gatherCommands();
   rl_attempted_completion_function = contextAwareCompletion;
   char *input;
 

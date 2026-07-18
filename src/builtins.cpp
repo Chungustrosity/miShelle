@@ -1,19 +1,17 @@
 #include "builtins.hpp"
 
-#include <functional>
 #include <iostream>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <unordered_map>
 
 using std::cout;
 
-static const std::unordered_map<string, std::function<int(const Parser &)>>
-    builtins{{"echo", echo_builtin},
-             {"type", type_builtin},
-             {"exit", exit_builtin},
-             {"pwd", pwd_builtin},
-             {"cd", cd_builtin}};
+const std::unordered_map<string, std::function<int(const Parser &)>> builtins{
+    {"echo", echo_builtin},
+    {"type", type_builtin},
+    {"exit", exit_builtin},
+    {"pwd", pwd_builtin},
+    {"cd", cd_builtin}};
 
 bool isBuiltin(const Parser &parsedInput) {
   return builtins.contains(parsedInput.getCommand());

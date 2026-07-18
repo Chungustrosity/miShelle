@@ -1,19 +1,67 @@
+#include "reading.hpp"
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
+#include <iostream>
 #include <string>
+#include <unistd.h>
+#include <unordered_set>
 #include <vector>
 
 #include <readline/readline.h>
 
 #include "Parser.hpp"
+#include "builtins.hpp"
+
+static std::unordered_set<std::string> uniqueCommands;
+namespace fs = std::filesystem;
+void appendBuiltinsToSet(std::unordered_set<std::string> &uniqueCommands) {
+  for (const auto &[commandName, commandFunction] : builtins) {
+    uniqueCommands.insert(commandName);
+  }
+}
+void pushViableCommandsToSet(const std::string &dirPath,
+                             std::unordered_set<std::string> &commandSet) {
+  if (dirPath.empty() || !fs::exists(dirPath) || !fs::is_directory(dirPath))
+    return;
+  for (const auto &dirEntry : fs::directory_iterator(dirPath)) {
+    if (fs::is_regular_file(dirEntry.status())) {
+      if (access(dirEntry.path().c_str(), X_OK) == 0) {
+        commandSet.insert(dirEntry.path().filename().string());
+      }
+    }
+  }
+}
+void gatherCommands() {
+  const char DELIM = ':';
+  const char *rawPATH = std::getenv("PATH");
+  std::string PATH = std::string(rawPATH ? rawPATH : "") + DELIM;
+  size_t l = 0, r = 0;
+
+  if (PATH == std::string(1, DELIM)) {
+    std::cerr << "PATH Environment Variable wasn't found\n";
+    // return " ";
+  }
+
+  std::string dir;
+  for (int i = 0; i < PATH.size(); i++) {
+    if (PATH[i] == DELIM) {
+      try {
+        pushViableCommandsToSet(dir, uniqueCommands);
+      } catch (const fs::filesystem_error &e) {
+        std::cerr << "Directory " << dir << " traversal error: " << e.what()
+                  << "\n";
+      }
+      dir = "";
+    } else {
+      dir += PATH[i];
+    }
+  }
+  appendBuiltinsToSet(uniqueCommands);
+}
 
 extern char *rl_line_buffer;
 extern int rl_point;
-
-// TODO: please somehow generate this at compile time or something from the
-// builtins hashmap in bulitins.cpp so you have a single source of truth because
-// this is embrrassing
-std::vector<std::string> builtins_list{"echo", "type", "exit", "pwd", "cd"};
 
 char *command_generator(const char *text, int state);
 
@@ -38,28 +86,22 @@ char **contextAwareCompletion(const char *text, int start, int end) {
   default:
     return nullptr;
   }
-
-  if (start == 0) {
-    return rl_completion_matches(text, command_generator);
-  }
-  return nullptr;
 }
 
 char *command_generator(const char *text, int state) {
-  static size_t list_index;
+  static std::unordered_set<std::string>::const_iterator it;
   static int len;
 
   if (state == 0) {
-    list_index = 0;
+    it = uniqueCommands.begin();
     len = strlen(text);
   }
 
-  while (list_index < builtins_list.size()) {
-    const std::string &name = builtins_list[list_index];
-    list_index++;
-    if (strncmp(name.c_str(), text, len) == 0) {
-      return strdup(name.c_str());
-    }
+  while (it != uniqueCommands.end()) {
+    const std::string &command = *it;
+    it++;
+    if (strncmp(command.c_str(), text, len) == 0)
+      return strdup(command.c_str());
   }
   return nullptr;
 }

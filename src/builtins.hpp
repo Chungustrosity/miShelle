@@ -2,11 +2,15 @@
 
 #include "Parser.hpp"
 #include <filesystem>
+#include <functional>
 #include <string>
+#include <unordered_map>
 
 namespace fs = std::filesystem;
 using string = std::string;
 
+extern const std::unordered_map<string, std::function<int(const Parser &)>>
+    builtins;
 enum class CommandType { builtin, external, notACommand };
 bool isBuiltin(const Parser &parsedInput);
 int executeBuiltin(const Parser &parsedInput);
