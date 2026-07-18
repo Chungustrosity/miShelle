@@ -2,7 +2,10 @@
 
 #include "redirect.hpp"
 
+// Raw, SingleQuoted, and DoubleQuoted are intermediate token types that can
+// resolve to arguments and commands.
 enum class TokenType {
+  Command,
   Raw,
   DoubleQuoted,
   SingleQuoted,
@@ -36,5 +39,6 @@ public:
   bool isMultiLineCommand() const;
   std::vector<std::string> get_null_terminated_args() const;
   const std::vector<std::string> &getTokens() const;
+  const std::vector<TokenType> &getTokenTypes() const;
   const std::vector<Redirection> &getRedirections() const;
 };

@@ -35,7 +35,7 @@ CommandType findCommandType(const string &command);
 
 int main() {
 
-  rl_attempted_completion_function = simpleBuiltinCompletion;
+  rl_attempted_completion_function = contextAwareCompletion;
   char *input;
 
   while ((input = readline("$ ")) != nullptr) {

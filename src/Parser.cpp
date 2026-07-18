@@ -223,8 +223,10 @@ void Parser::parse() {
   while (command.empty() && i < tokens.size()) {
     if (command.empty() && (tokenTypes[i] == TokenType::Raw ||
                             tokenTypes[i] == TokenType::DoubleQuoted ||
-                            tokenTypes[i] == TokenType::SingleQuoted))
+                            tokenTypes[i] == TokenType::SingleQuoted)) {
       command = tokens[i];
+      tokenTypes[i] = TokenType::Command;
+    }
     i++;
   }
   // parse arguments
@@ -243,6 +245,9 @@ const strVector Parser::getArguments() const { return arguments; }
 bool Parser::isNoArguments() const { return noArguments; }
 bool Parser::isMultiLineCommand() const { return multiLineCommand; }
 const std::vector<std::string> &Parser::getTokens() const { return tokens; }
+const std::vector<TokenType> &Parser::getTokenTypes() const {
+  return tokenTypes;
+}
 const std::vector<Redirection> &Parser::getRedirections() const {
   return redirections;
 }
