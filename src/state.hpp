@@ -7,7 +7,6 @@
 
 class ShellState {
 public:
-  ShellState();
   void init();
   std::unordered_map<std::string, std::filesystem::path> completionSpecs;
 };
