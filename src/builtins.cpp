@@ -205,7 +205,7 @@ int complete_builtin(const Parser &parsedInput, ShellState &state) {
       cout << "complete -C \'" << state.completionSpecs[args[1]].string()
            << "\' " << args[1] << std::endl;
     }
-  } else if (args.size() > 3 && flag == "-C") {
+  } else if (args.size() >= 3 && flag == "-C") {
     state.completionSpecs[args[2]] = fs::path(args[1]);
   } else if (flag == "-r") {
     state.completionSpecs.erase(args[1]);
