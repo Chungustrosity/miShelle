@@ -10,25 +10,17 @@
 
 #include "Parser.hpp"
 #include "builtins.hpp"
-#include "reading.hpp"
 #include "redirect.hpp"
+#include "state.hpp"
 
 using string = std::string;
 using string_view = std::string_view;
 using strVector = std::vector<std::string>;
 
-int echo_builtin(const Parser &parsedInput);
-int type_builtin(const Parser &parsedInput);
-int exit_builtin(const Parser &parsedInput);
-int execute_external(const Parser &parsedInput);
-int pwd_builtin(const Parser &parsedInput);
-int cd_builtin(const Parser &parsedInput);
-
 CommandType findCommandType(const string &command);
 
 int main() {
-  gatherCommands();
-  rl_attempted_completion_function = contextAwareCompletion;
+  global_state.init();
   char *input;
 
   while ((input = readline("$ ")) != nullptr) {
@@ -47,7 +39,7 @@ int main() {
             applyRedirections(parsedInput.getRedirections());
         int exitCode = 0;
         if (redReturn.success)
-          exitCode = executeBuiltin(parsedInput);
+          exitCode = executeBuiltin(parsedInput, global_state);
         deApplyRedirections(redReturn);
         if (exitCode == 0)
           continue;

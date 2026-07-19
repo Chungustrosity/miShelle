@@ -2,7 +2,7 @@
 
 #include "redirect.hpp"
 
-// Raw, SingleQuoted, and DoubleQuoted are intermediate token types that can
+// Raw, SingleQuoted, and DoubleQuoted are intermediate token types that may
 // resolve to arguments and commands.
 enum class TokenType {
   Command,

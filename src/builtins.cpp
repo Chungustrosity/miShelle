@@ -1,26 +1,29 @@
 #include "builtins.hpp"
+#include "reading.hpp"
+#include "state.hpp"
 
+#include <filesystem>
 #include <iostream>
+#include <ostream>
 #include <sys/types.h>
 #include <sys/wait.h>
 
 using std::cout;
 
-const std::unordered_map<string, std::function<int(const Parser &)>> builtins{
-    {"echo", echo_builtin},
-    {"type", type_builtin},
-    {"exit", exit_builtin},
-    {"pwd", pwd_builtin},
-    {"cd", cd_builtin}};
+const std::unordered_map<string,
+                         std::function<int(const Parser &, ShellState &)>>
+    builtins{{"echo", echo_builtin}, {"type", type_builtin},
+             {"exit", exit_builtin}, {"pwd", pwd_builtin},
+             {"cd", cd_builtin},     {"complete", complete_builtin}};
 
 bool isBuiltin(const Parser &parsedInput) {
   return builtins.contains(parsedInput.getCommand());
 }
-int executeBuiltin(const Parser &parsedInput) {
-  return builtins.at(parsedInput.getCommand())(parsedInput);
+int executeBuiltin(const Parser &parsedInput, ShellState &state) {
+  return builtins.at(parsedInput.getCommand())(parsedInput, state);
 }
 
-int echo_builtin(const Parser &parsedInput) {
+int echo_builtin(const Parser &parsedInput, ShellState &state) {
   for (const auto argument : parsedInput.getArguments()) {
     cout << argument << " ";
   }
@@ -87,7 +90,7 @@ fs::path findInPATH(const string &command) {
   return emptyPath;
 }
 
-int type_builtin(const Parser &parsedInput) {
+int type_builtin(const Parser &parsedInput, ShellState &state) {
   if (parsedInput.isNoArguments())
     return 0;
 
@@ -128,15 +131,12 @@ CommandType findCommandType(const string &command) {
   }
   return commandType;
 }
-int exit_builtin(const Parser &parsedInput) { return 1; }
+int exit_builtin(const Parser &parsedInput, ShellState &state) { return 1; }
 
 #if !defined(_WIN32)
 #include <unistd.h>
 #endif
 
-// TODO: refactor so you don't need to check if the command is
-// CommandType::external in the main loop just to apply some of the same logic
-// again here to get the filePath
 int execute_external(const Parser &parsedInput) {
   std::string command_string(parsedInput.getCommand());
   std::vector<string> args = parsedInput.getArguments();
@@ -163,7 +163,7 @@ int execute_external(const Parser &parsedInput) {
   return 0;
 }
 
-int pwd_builtin(const Parser &parsedInput) {
+int pwd_builtin(const Parser &parsedInput, ShellState &state) {
   try {
     fs::path cwd = fs::current_path();
     cout << cwd.string() << "\n";
@@ -172,7 +172,7 @@ int pwd_builtin(const Parser &parsedInput) {
   }
   return 0;
 }
-int cd_builtin(const Parser &parsedInput) {
+int cd_builtin(const Parser &parsedInput, ShellState &state) {
   fs::path target = parsedInput.getArguments()[0];
   if (target.string()[0] == '~') {
     // only works on POSIX
@@ -190,5 +190,26 @@ int cd_builtin(const Parser &parsedInput) {
   // } catch (const fs::filesystem_error &e) {
   //   std::cerr << "cd error: " << e.what() << "\n";
   // }
+  return 0;
+}
+
+int complete_builtin(const Parser &parsedInput, ShellState &state) {
+  const std::vector<std::string> &args = parsedInput.getArguments();
+  if (args.size() < 2)
+    return 0;
+  std::string flag = args[0];
+  if (flag == "-p") {
+    if (!state.completionSpecs.contains(args[1])) {
+      cout << "complete: " << args[1] << ": no completion specification";
+    } else {
+      cout << "complete -C \'" << state.completionSpecs[args[1]].string()
+           << "\' " << args[1] << std::endl;
+    }
+  } else if (args.size() > 3 && flag == "-C") {
+    state.completionSpecs[args[2]] = fs::path(args[1]);
+  } else if (flag == "-r") {
+    state.completionSpecs.erase(args[1]);
+  }
+
   return 0;
 }
