@@ -1,5 +1,4 @@
 #include "builtins.hpp"
-#include "reading.hpp"
 #include "state.hpp"
 
 #include <filesystem>
@@ -200,7 +199,8 @@ int complete_builtin(const Parser &parsedInput, ShellState &state) {
   std::string flag = args[0];
   if (flag == "-p") {
     if (!state.completionSpecs.contains(args[1])) {
-      cout << "complete: " << args[1] << ": no completion specification";
+      cout << "complete: " << args[1] << ": no completion specification"
+           << std::endl;
     } else {
       cout << "complete -C \'" << state.completionSpecs[args[1]].string()
            << "\' " << args[1] << std::endl;
