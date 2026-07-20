@@ -149,13 +149,17 @@ char *spec_argument_generator(const char *text, int state) {
 std::unordered_set<std::string> fetch_suggestions() {
   std::unordered_set<std::string> result;
   std::vector<std::string> args = getExecArgs();
-  std::vector<char *> argv;
+
+  const std::filesystem::path &path = global_state.completionSpecs[args[0]];
+
+  std::vector<std::string> argv_str;
+  argv_str.push_back(path.string());
   for (std::string &arg : args)
+    argv_str.push_back(arg);
+  std::vector<char *> argv;
+  for (std::string &arg : argv_str)
     argv.push_back(arg.data());
   argv.push_back(nullptr);
-
-  const std::filesystem::path &path = global_state.completionSpecs[argv[0]];
-  const char *path_c = path.c_str();
 
   int pipefd[2];
   if (pipe(pipefd) == -1) {
@@ -178,7 +182,7 @@ std::unordered_set<std::string> fetch_suggestions() {
     close(pipefd[1]);
     setenv("COMP_LINE", rl_line_buffer, 1);
     setenv("COMP_POINT", std::to_string(rl_point).c_str(), 1);
-    execv(path_c, argv.data());
+    execv(path.c_str(), argv.data());
     perror("shell: execv failed");
     exit(EXIT_FAILURE);
   } else {
@@ -213,21 +217,25 @@ std::vector<std::string> getExecArgs() {
   bool isCurrentTokenEmpty =
       (rl_point > 0 && rl_line_buffer[rl_point - 1] == ' ');
   Parser parser(inputSoFar);
-  argv.push_back(parser.getCommand());
+  argv.push_back(parser.getCommand()); //$1
   auto args = parser.getArguments();
 
   if (isCurrentTokenEmpty) {
-    argv.push_back("");
+    argv.push_back(""); //$2
+    if (args.empty()) {
+      argv.push_back(parser.getCommand()); //$3
+    } else {
+      argv.push_back(args.back()); //$3
+    }
   } else {
-    argv.push_back(args.back());
-  }
-
-  if (args.size() == 0) {
-    argv.push_back("");
-  } else if (args.size() == 1) {
-    argv.push_back("");
-  } else if (args.size() >= 2) {
-    argv.push_back(args[args.size() - 2]);
+    // no need to check args.size as this function is only called on arguments
+    // and not commands
+    argv.push_back(args.back()); //$2
+    if (args.size() >= 2) {
+      argv.push_back(args[args.size() - 2]); //$3
+    } else {
+      argv.push_back(parser.getCommand()); //$3
+    }
   }
 
   return argv;
