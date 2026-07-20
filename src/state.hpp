@@ -3,7 +3,6 @@
 #include <filesystem>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 
 class ShellState {
 public:

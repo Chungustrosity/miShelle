@@ -211,7 +211,7 @@ std::vector<std::string> getExecArgs() {
   std::vector<std::string> argv;
   std::string inputSoFar(rl_line_buffer, rl_point);
   bool isCurrentTokenEmpty =
-      rl_line_buffer[rl_point] == ' '; // doule check if valid
+      (rl_point > 0 && rl_line_buffer[rl_point - 1] == ' ');
   Parser parser(inputSoFar);
   argv.push_back(parser.getCommand());
   auto args = parser.getArguments();
