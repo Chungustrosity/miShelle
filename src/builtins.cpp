@@ -13,7 +13,8 @@ const std::unordered_map<string,
                          std::function<int(const Parser &, ShellState &)>>
     builtins{{"echo", echo_builtin}, {"type", type_builtin},
              {"exit", exit_builtin}, {"pwd", pwd_builtin},
-             {"cd", cd_builtin},     {"complete", complete_builtin}};
+             {"cd", cd_builtin},     {"complete", complete_builtin},
+             {"jobs", jobs_builtin}};
 
 bool isBuiltin(const Parser &parsedInput) {
   return builtins.contains(parsedInput.getCommand());
@@ -213,3 +214,5 @@ int complete_builtin(const Parser &parsedInput, ShellState &state) {
 
   return 0;
 }
+
+int jobs_builtin(const Parser &parsedInput, ShellState &state) { return 0; }

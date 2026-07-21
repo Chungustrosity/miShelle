@@ -32,6 +32,7 @@ fs::path findPathInDirectory(const string &dirPath, const string &commandName);
 fs::path findInPATH(const string &command);
 
 int type_builtin(const Parser &parsedInput, ShellState &state);
+int jobs_builtin(const Parser &parsedInput, ShellState &state);
 int echo_builtin(const Parser &parsedInput, ShellState &state);
 int exit_builtin(const Parser &parsedInput, ShellState &state);
 int pwd_builtin(const Parser &parsedInput, ShellState &state);
