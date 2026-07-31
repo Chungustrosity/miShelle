@@ -1,12 +1,31 @@
 #pragma once
 
+#include "Parser.hpp"
 #include <filesystem>
 #include <string>
+#include <sys/types.h>
 #include <unordered_map>
 
+enum class JobStatus { Running, Finished };
+struct Job {
+  pid_t pid;
+  Statement statement;
+  JobStatus status = JobStatus::Running;
+};
+
 class ShellState {
+private:
+  int executeStatement(const Parser &parsedInput);
+  int executeConditional(const Statement &statement, ShellState &state,
+                         int prevExitCode);
+  void executeParallel(const Statement &statement, ShellState &state);
+
+  std::vector<Job> jobs;
+
 public:
   void init();
+  void executeParser(const Parser &parsedInput);
+  int executeStatement(const Statement &statement, ShellState &state);
   std::unordered_map<std::string, std::filesystem::path> completionSpecs;
 };
 

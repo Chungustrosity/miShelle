@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -18,14 +19,10 @@ struct Redirection {
 struct SavedFD {
   int interceptedStreamFD;
   int backupFD;
-};
-struct ApplyRedirectionsReturnObject {
-  bool success = true;
-  std::vector<SavedFD> appliedRedirections;
+  SavedFD(int a, int b) : interceptedStreamFD(a), backupFD(b) {};
 };
 
-ApplyRedirectionsReturnObject
+std::optional<std::vector<SavedFD>>
 applyRedirections(const std::vector<Redirection> &redirections);
 
-void deApplyRedirections(
-    const ApplyRedirectionsReturnObject &redirectReturnObj);
+void deApplyRedirections(const std::vector<SavedFD> &redirections);

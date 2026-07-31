@@ -1,4 +1,6 @@
 .clangd
+.prettierrc
+shell_changes.diff
 
 
 

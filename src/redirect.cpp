@@ -7,31 +7,44 @@
 #include <unistd.h>
 #include <vector>
 
-ApplyRedirectionsReturnObject
+std::optional<std::vector<SavedFD>>
 applyRedirections(const std::vector<Redirection> &redirections) {
-  ApplyRedirectionsReturnObject retObj;
+  std::vector<SavedFD> retVec;
   for (const Redirection &r : redirections) {
     int openedFileFD = open(r.target.c_str(), r.flags, 0644);
     if (openedFileFD == -1) {
       perror("open failed");
-      retObj.success = false;
-      return retObj;
+      deApplyRedirections(retVec);
+      return std::nullopt;
     }
 
     int backup_fd = dup(r.FileDescriptor);
-    retObj.appliedRedirections.push_back({r.FileDescriptor, backup_fd});
+    if (backup_fd == -1) {
+      perror("dup failed");
+      close(openedFileFD);
+      deApplyRedirections(retVec);
+      return std::nullopt;
+    }
 
-    dup2(openedFileFD, r.FileDescriptor);
+    retVec.push_back({r.FileDescriptor, backup_fd});
 
-    close(openedFileFD);
+    if (dup2(openedFileFD, r.FileDescriptor) == -1) {
+      perror("dup2 failed");
+      close(openedFileFD);
+      deApplyRedirections(retVec);
+      return std::nullopt;
+    }
+
+    if (openedFileFD != r.FileDescriptor) {
+      close(openedFileFD);
+    }
   }
-  return retObj;
+  return retVec;
 }
 
-void deApplyRedirections(
-    const ApplyRedirectionsReturnObject &redirectReturnObj) {
-  for (int i = redirectReturnObj.appliedRedirections.size() - 1; i >= 0; i--) {
-    const auto &backup = redirectReturnObj.appliedRedirections[i];
+void deApplyRedirections(const std::vector<SavedFD> &redirections) {
+  for (int i = redirections.size() - 1; i >= 0; i--) {
+    const auto &backup = redirections[i];
     dup2(backup.backupFD, backup.interceptedStreamFD);
     close(backup.backupFD);
   }

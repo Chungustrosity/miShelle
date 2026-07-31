@@ -1,4 +1,5 @@
 #include "builtins.hpp"
+#include "Parser.hpp"
 #include "state.hpp"
 
 #include <filesystem>
@@ -10,21 +11,22 @@
 using std::cout;
 
 const std::unordered_map<string,
-                         std::function<int(const Parser &, ShellState &)>>
+                         std::function<int(const Statement &, ShellState &)>>
     builtins{{"echo", echo_builtin}, {"type", type_builtin},
              {"exit", exit_builtin}, {"pwd", pwd_builtin},
              {"cd", cd_builtin},     {"complete", complete_builtin},
              {"jobs", jobs_builtin}};
 
-bool isBuiltin(const Parser &parsedInput) {
-  return builtins.contains(parsedInput.getCommand());
+bool isBuiltin(const std::string &commandName) {
+  return builtins.contains(commandName);
 }
-int executeBuiltin(const Parser &parsedInput, ShellState &state) {
-  return builtins.at(parsedInput.getCommand())(parsedInput, state);
+int executeBuiltinCommandStatement(const Statement &statement,
+                                   ShellState &state) {
+  return builtins.at(statement.command)(statement, state);
 }
 
-int echo_builtin(const Parser &parsedInput, ShellState &state) {
-  for (const auto argument : parsedInput.getArguments()) {
+int echo_builtin(const Statement &statement, ShellState &state) {
+  for (const auto &argument : statement.arguments) {
     cout << argument << " ";
   }
   cout << "\n";
@@ -90,11 +92,11 @@ fs::path findInPATH(const string &command) {
   return emptyPath;
 }
 
-int type_builtin(const Parser &parsedInput, ShellState &state) {
-  if (parsedInput.isNoArguments())
+int type_builtin(const Statement &statement, ShellState &state) {
+  if (statement.arguments.empty())
     return 0;
 
-  string command = parsedInput.getArguments()[0];
+  string command = statement.arguments[0];
   CommandType commandType = CommandType::notACommand;
 
   fs::path commandPath = findInPATH(command);
@@ -131,15 +133,15 @@ CommandType findCommandType(const string &command) {
   }
   return commandType;
 }
-int exit_builtin(const Parser &parsedInput, ShellState &state) { return 1; }
+int exit_builtin(const Statement &statement, ShellState &state) { return 1; }
 
 #if !defined(_WIN32)
 #include <unistd.h>
 #endif
 
-int execute_external(const Parser &parsedInput) {
-  std::string command_string(parsedInput.getCommand());
-  std::vector<string> args = parsedInput.getArguments();
+int execute_external(const Statement &statement, ShellState &state) {
+  std::string command_string = statement.command;
+  std::vector<string> args = statement.arguments;
   std::vector<char *> argv;
   argv.push_back(command_string.data());
   for (auto &arg : args) {
@@ -149,7 +151,7 @@ int execute_external(const Parser &parsedInput) {
 
   pid_t pid = fork();
   if (pid == 0) {
-    applyRedirections(parsedInput.getRedirections());
+    applyRedirections(statement.redirections);
     if (execvp(argv[0], argv.data()) == -1) {
       std::cerr << argv[0] << ": command not found\n";
       exit(1);
@@ -163,7 +165,7 @@ int execute_external(const Parser &parsedInput) {
   return 0;
 }
 
-int pwd_builtin(const Parser &parsedInput, ShellState &state) {
+int pwd_builtin(const Statement &statement, ShellState &state) {
   try {
     fs::path cwd = fs::current_path();
     cout << cwd.string() << "\n";
@@ -172,8 +174,8 @@ int pwd_builtin(const Parser &parsedInput, ShellState &state) {
   }
   return 0;
 }
-int cd_builtin(const Parser &parsedInput, ShellState &state) {
-  fs::path target = parsedInput.getArguments()[0];
+int cd_builtin(const Statement &statement, ShellState &state) {
+  fs::path target = statement.arguments[0];
   if (target.string()[0] == '~') {
     // only works on POSIX
     target = fs::path(std::getenv("HOME") + target.string().substr(1));
@@ -193,8 +195,8 @@ int cd_builtin(const Parser &parsedInput, ShellState &state) {
   return 0;
 }
 
-int complete_builtin(const Parser &parsedInput, ShellState &state) {
-  const std::vector<std::string> &args = parsedInput.getArguments();
+int complete_builtin(const Statement &statement, ShellState &state) {
+  const std::vector<std::string> &args = statement.arguments;
   if (args.size() < 2)
     return 0;
   std::string flag = args[0];
@@ -215,4 +217,4 @@ int complete_builtin(const Parser &parsedInput, ShellState &state) {
   return 0;
 }
 
-int jobs_builtin(const Parser &parsedInput, ShellState &state) { return 0; }
+int jobs_builtin(const Statement &statement, ShellState &state) { return 0; }

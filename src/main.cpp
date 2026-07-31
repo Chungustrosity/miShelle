@@ -10,7 +10,6 @@
 
 #include "Parser.hpp"
 #include "builtins.hpp"
-#include "redirect.hpp"
 #include "state.hpp"
 
 using string = std::string;
@@ -27,27 +26,8 @@ int main() {
     if (*input) {
       add_history(input);
       std::string paddedInput = std::string(" ") + input + " ";
-
       Parser parsedInput(paddedInput);
-      string command = parsedInput.getCommand();
-      strVector arguments = parsedInput.getArguments();
-      if (command.empty())
-        continue;
-
-      if (isBuiltin(parsedInput)) {
-        ApplyRedirectionsReturnObject redReturn =
-            applyRedirections(parsedInput.getRedirections());
-        int exitCode = 0;
-        if (redReturn.success)
-          exitCode = executeBuiltin(parsedInput, global_state);
-        deApplyRedirections(redReturn);
-        if (exitCode == 0)
-          continue;
-        if (exitCode == 1)
-          break;
-      } else {
-        execute_external(parsedInput);
-      }
+      global_state.executeParser(parsedInput);
     }
     free(input);
   }

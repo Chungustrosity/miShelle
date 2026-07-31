@@ -19,22 +19,26 @@ namespace fs = std::filesystem;
 using string = std::string;
 
 extern const std::unordered_map<
-    string, std::function<int(const Parser &, ShellState &)>>
+    string, std::function<int(const Statement &, ShellState &)>>
     builtins;
 enum class CommandType { builtin, external, notACommand };
 CommandType findCommandType(const string &command);
-bool isBuiltin(const Parser &parsedInput);
-int executeBuiltin(const Parser &parsedInput, ShellState &state);
-int execute_external(const Parser &parsedInput);
+bool isBuiltin(const std::string &commandName);
+// int executeBuiltinCommandStatement(const Parser &parsedInput,
+//                                    ShellState &state);
+int executeBuiltinCommandStatement(const Statement &statement,
+                                   ShellState &state);
+// int execute_external(const Parser &parsedInput, ShellState &state);
+int execute_external(const Statement &statement, ShellState &state);
 
 bool canBeExecuted(const fs::path &filePath);
 fs::path findPathInDirectory(const string &dirPath, const string &commandName);
 fs::path findInPATH(const string &command);
 
-int type_builtin(const Parser &parsedInput, ShellState &state);
-int jobs_builtin(const Parser &parsedInput, ShellState &state);
-int echo_builtin(const Parser &parsedInput, ShellState &state);
-int exit_builtin(const Parser &parsedInput, ShellState &state);
-int pwd_builtin(const Parser &parsedInput, ShellState &state);
-int cd_builtin(const Parser &parsedInput, ShellState &state);
-int complete_builtin(const Parser &parsedInput, ShellState &state);
+int type_builtin(const Statement &statement, ShellState &state);
+int jobs_builtin(const Statement &statement, ShellState &state);
+int echo_builtin(const Statement &statement, ShellState &state);
+int exit_builtin(const Statement &statement, ShellState &state);
+int pwd_builtin(const Statement &statement, ShellState &state);
+int cd_builtin(const Statement &statement, ShellState &state);
+int complete_builtin(const Statement &statement, ShellState &state);

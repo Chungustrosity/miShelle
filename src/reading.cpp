@@ -79,25 +79,28 @@ char **contextAwareCompletion(const char *text, int start, int end) {
   std::string inputSoFar(rl_line_buffer, rl_point);
   std::string paddedInput = " " + inputSoFar + "dummy" + " ";
   Parser parser(paddedInput);
+  int lastStatement = parser.getLastStatement();
   const auto &tokens = parser.getTokens();
-  const auto &tokenTypes = parser.getTokenTypes();
-  TokenType currentTokenType = tokenTypes.back();
-  switch (currentTokenType) {
-  case TokenType::Command:
+  const auto &semanticTags = parser.getSemanticTags();
+  SemanticTag currentSemanticTag = semanticTags.back();
+
+  switch (currentSemanticTag) {
+
+  case SemanticTag::Command:
     return rl_completion_matches(text, command_generator);
-  case TokenType::Raw:
-  case TokenType::DoubleQuoted:
-  case TokenType::SingleQuoted:
-    if (global_state.completionSpecs.contains(parser.getCommand())) {
+
+  case SemanticTag::Argument:
+    if (global_state.completionSpecs.contains(
+            parser.getCommand(lastStatement))) {
       return rl_completion_matches(text, spec_argument_generator);
     }
 
-  case TokenType::RedirectionTarget:
-
   // impossible
-  case TokenType::RedirectionFileDescriptor:
-  case TokenType::Redirection:
+  case SemanticTag::RedirectionFileDescriptor:
+  case SemanticTag::Redirection:
+  case SemanticTag::CommandTerminator:
 
+  case SemanticTag::RedirectionTarget:
   default:
     return nullptr;
   }
@@ -217,13 +220,14 @@ std::vector<std::string> getExecArgs() {
   bool isCurrentTokenEmpty =
       (rl_point > 0 && rl_line_buffer[rl_point - 1] == ' ');
   Parser parser(inputSoFar);
-  argv.push_back(parser.getCommand()); //$1
-  auto args = parser.getArguments();
+  int lastStatement = parser.getLastStatement();
+  argv.push_back(parser.getCommand(lastStatement)); //$1
+  auto args = parser.getArguments(lastStatement);
 
   if (isCurrentTokenEmpty) {
     argv.push_back(""); //$2
     if (args.empty()) {
-      argv.push_back(parser.getCommand()); //$3
+      argv.push_back(parser.getCommand(lastStatement)); //$3
     } else {
       argv.push_back(args.back()); //$3
     }
@@ -234,7 +238,7 @@ std::vector<std::string> getExecArgs() {
     if (args.size() >= 2) {
       argv.push_back(args[args.size() - 2]); //$3
     } else {
-      argv.push_back(parser.getCommand()); //$3
+      argv.push_back(parser.getCommand(lastStatement)); //$3
     }
   }
 
