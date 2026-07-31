@@ -24,7 +24,7 @@ private:
 
 public:
   void init();
-  void executeParser(const Parser &parsedInput);
+  int executeParser(const Parser &parsedInput);
   int executeStatement(const Statement &statement, ShellState &state);
   std::unordered_map<std::string, std::filesystem::path> completionSpecs;
 };

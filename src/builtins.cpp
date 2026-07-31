@@ -133,7 +133,9 @@ CommandType findCommandType(const string &command) {
   }
   return commandType;
 }
-int exit_builtin(const Statement &statement, ShellState &state) { return 1; }
+int exit_builtin(const Statement &statement, ShellState &state) {
+  return 80085;
+}
 
 #if !defined(_WIN32)
 #include <unistd.h>

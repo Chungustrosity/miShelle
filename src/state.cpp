@@ -4,6 +4,7 @@
 #include "reading.hpp"
 #include "redirect.hpp"
 
+#include <iostream>
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <sys/types.h>
@@ -16,12 +17,16 @@ void ShellState::init() {
   gatherCommands();
   rl_attempted_completion_function = contextAwareCompletion;
 }
-void ShellState::executeParser(const Parser &parsedInput) {
+
+int ShellState::executeParser(const Parser &parsedInput) {
   const auto &terminators = parsedInput.getStatementTerminators();
   const auto &statements = parsedInput.getStatements();
   int lastExitCode = 0;
   for (int statementIndex = 0; statementIndex < terminators.size();
        statementIndex++) {
+    if (lastExitCode == 80085) {
+      return 80085;
+    }
     const auto &statement = statements[statementIndex];
 
     switch (terminators[statementIndex]) {
@@ -36,6 +41,7 @@ void ShellState::executeParser(const Parser &parsedInput) {
       break;
     }
   }
+  return lastExitCode;
 }
 
 int ShellState::executeStatement(const Statement &statement,
@@ -77,6 +83,7 @@ void ShellState::executeParallel(const Statement &statement,
     exit(exitCode);
   } else if (job.pid > 0) {
     jobs.push_back(job);
+    std::cout << "[" << jobs.size() << "] " << job.pid << std::endl;
   } else {
     perror("fork");
   }

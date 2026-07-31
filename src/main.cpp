@@ -27,7 +27,8 @@ int main() {
       add_history(input);
       std::string paddedInput = std::string(" ") + input + " ";
       Parser parsedInput(paddedInput);
-      global_state.executeParser(parsedInput);
+      if (global_state.executeParser(parsedInput) == 80085)
+        break;
     }
     free(input);
   }
