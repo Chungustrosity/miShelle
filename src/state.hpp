@@ -18,7 +18,6 @@ private:
   int executeConditional(const Statement &statement, ShellState &state,
                          int prevExitCode);
   void executeParallel(const Statement &statement, ShellState &state);
-
   std::vector<Job> jobs;
 
 public:
@@ -26,6 +25,7 @@ public:
   int executeParser(const Parser &parsedInput);
   int executeStatement(const Statement &statement, ShellState &state,
                        bool forkNeeded);
+  const std::vector<Job> getJobs() const { return jobs; };
   std::unordered_map<std::string, std::filesystem::path> completionSpecs;
 };
 

@@ -34,6 +34,14 @@ struct Statement {
   std::vector<Redirection> redirections;
   bool noArguments = false;
   CommandTerminatorType terminator = CommandTerminatorType::Sequence;
+
+  std::string reconstructCommand() const {
+    std::string recCmd = command;
+    for (const std::string &arg : arguments)
+      recCmd += " " + arg;
+    // TODO: append redirections
+    return recCmd;
+  }
 };
 
 class Parser {

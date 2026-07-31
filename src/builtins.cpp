@@ -229,4 +229,14 @@ int complete_builtin(const Statement &statement, ShellState &state) {
   return 0;
 }
 
-int jobs_builtin(const Statement &statement, ShellState &state) { return 0; }
+int jobs_builtin(const Statement &statement, ShellState &state) {
+  const std::vector<Job> &jobs = state.getJobs();
+  for (int i = 0; i < jobs.size(); i++) {
+    std::cout
+        << "[" << i + 1 << "] " << (i == jobs.size() - 1 ? "+" : "-") << "  "
+        << "Running"
+        << "                 " // the status and the padding total 24 chars
+        << jobs[i].statement.reconstructCommand() << "\n";
+  }
+  return 0;
+}
