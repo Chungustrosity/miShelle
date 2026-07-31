@@ -31,7 +31,7 @@ int ShellState::executeParser(const Parser &parsedInput) {
 
     switch (terminators[statementIndex]) {
     case CommandTerminatorType::Sequence:
-      lastExitCode = executeStatement(statement, global_state);
+      lastExitCode = executeStatement(statement, global_state, true);
       break;
     case CommandTerminatorType::And:
       lastExitCode = executeConditional(statement, global_state, lastExitCode);
@@ -44,8 +44,8 @@ int ShellState::executeParser(const Parser &parsedInput) {
   return lastExitCode;
 }
 
-int ShellState::executeStatement(const Statement &statement,
-                                 ShellState &state) {
+int ShellState::executeStatement(const Statement &statement, ShellState &state,
+                                 bool forkNeeded) {
   std::string command = statement.command;
   CommandType commandType = findCommandType(command);
   switch (commandType) {
@@ -61,14 +61,14 @@ int ShellState::executeStatement(const Statement &statement,
 
   case CommandType::notACommand:
   case CommandType::external:
-    return execute_external(statement, global_state);
+    return execute_external(statement, global_state, forkNeeded);
   }
 }
 
 int ShellState::executeConditional(const Statement &statement,
                                    ShellState &state, int prevExitCode) {
   if (prevExitCode == 0) {
-    return executeStatement(statement, state);
+    return executeStatement(statement, state, true);
   }
   return prevExitCode;
 }
@@ -79,7 +79,7 @@ void ShellState::executeParallel(const Statement &statement,
   job.statement = statement;
   job.pid = fork();
   if (job.pid == 0) {
-    int exitCode = executeStatement(statement, state);
+    int exitCode = executeStatement(statement, state, false);
     exit(exitCode);
   } else if (job.pid > 0) {
     jobs.push_back(job);

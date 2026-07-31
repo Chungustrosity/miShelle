@@ -141,7 +141,8 @@ int exit_builtin(const Statement &statement, ShellState &state) {
 #include <unistd.h>
 #endif
 
-int execute_external(const Statement &statement, ShellState &state) {
+int execute_external(const Statement &statement, ShellState &state,
+                     bool forkNeeded) {
   std::string command_string = statement.command;
   std::vector<string> args = statement.arguments;
   std::vector<char *> argv;
@@ -150,6 +151,15 @@ int execute_external(const Statement &statement, ShellState &state) {
     argv.push_back(arg.data());
   }
   argv.push_back(nullptr);
+
+  if (!forkNeeded) {
+    applyRedirections(statement.redirections);
+    if (execvp(argv[0], argv.data()) == -1) {
+      std::cerr << argv[0] << ": command not found\n";
+      exit(1);
+    }
+    return 0;
+  }
 
   pid_t pid = fork();
   if (pid == 0) {

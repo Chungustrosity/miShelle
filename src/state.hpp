@@ -15,7 +15,6 @@ struct Job {
 
 class ShellState {
 private:
-  int executeStatement(const Parser &parsedInput);
   int executeConditional(const Statement &statement, ShellState &state,
                          int prevExitCode);
   void executeParallel(const Statement &statement, ShellState &state);
@@ -25,7 +24,8 @@ private:
 public:
   void init();
   int executeParser(const Parser &parsedInput);
-  int executeStatement(const Statement &statement, ShellState &state);
+  int executeStatement(const Statement &statement, ShellState &state,
+                       bool forkNeeded);
   std::unordered_map<std::string, std::filesystem::path> completionSpecs;
 };
 

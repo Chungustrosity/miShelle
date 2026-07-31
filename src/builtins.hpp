@@ -29,7 +29,8 @@ bool isBuiltin(const std::string &commandName);
 int executeBuiltinCommandStatement(const Statement &statement,
                                    ShellState &state);
 // int execute_external(const Parser &parsedInput, ShellState &state);
-int execute_external(const Statement &statement, ShellState &state);
+int execute_external(const Statement &statement, ShellState &state,
+                     bool forkNeeded);
 
 bool canBeExecuted(const fs::path &filePath);
 fs::path findPathInDirectory(const string &dirPath, const string &commandName);
